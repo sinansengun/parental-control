@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Family Guard</string>
+    <string name="accessibility_description">Monitors WhatsApp notifications for parental control</string>
+    <string name="notification_channel_name">Location Tracking</string>
+    <string name="notification_title">Family Guard is active</string>
+    <string name="notification_text">Keeping your child safe</string>
+</resources>

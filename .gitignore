@@ -1,0 +1,30 @@
+# Backend (.NET)
+backend/bin/
+backend/obj/
+backend/*.user
+
+# Android
+android-agent/.gradle/
+android-agent/local.properties
+android-agent/app/build/
+android-agent/build/
+android-agent/**/*.iml
+android-agent/.idea/
+
+# Dashboard
+dashboard/node_modules/
+dashboard/dist/
+
+# Secrets / env
+appsettings.Production.json
+*.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.user
