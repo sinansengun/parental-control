@@ -8,7 +8,8 @@
 - `SetupActivity.kt` — token giriş ekranı (ilk açılış)
 - `TokenStore.kt` — DataStore ile kalıcı token saklama (cachedToken in-memory cache)
 - `service/LocationTrackingService.kt` — GPS foreground service (her 60s)
-- `service/WhatsAppAccessibilityService.kt` — WhatsApp bildirim okuma
+- `service/WhatsAppNotificationListener.kt` — NotificationListenerService ile WhatsApp mesaj yakalama (AccessibilityService yerine, daha güvenilir)
+- `service/WhatsAppAccessibilityService.kt` — fallback olarak korundu
 - `service/SyncWorker.kt` — arama + SMS logu 15 dakikada bir sync + açılışta anlık sync
 - `service/BootReceiver.kt` — cihaz açılınca token yükle + servisleri yeniden başlat
 - `network/ApiClient.kt` — Retrofit + OkHttp (TokenStore.cachedToken ile X-Device-Token header)

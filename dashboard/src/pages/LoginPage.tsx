@@ -2,18 +2,6 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { login, register } from '../api/api'
 
-const styles: Record<string, React.CSSProperties> = {
-  container: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  card: { background: '#fff', padding: 40, borderRadius: 12, boxShadow: '0 4px 24px rgba(0,0,0,.10)', width: 360 },
-  title: { fontSize: 24, fontWeight: 700, marginBottom: 8, color: '#1a1a2e' },
-  sub:   { color: '#666', marginBottom: 24, fontSize: 14 },
-  label: { display: 'block', marginBottom: 6, fontWeight: 600, fontSize: 13 },
-  input: { width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, marginBottom: 14 },
-  btn:   { width: '100%', padding: 12, background: '#4f46e5', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 15 },
-  toggle:{ textAlign: 'center', marginTop: 16, color: '#4f46e5', cursor: 'pointer', fontSize: 13 },
-  error: { color: '#dc2626', marginBottom: 12, fontSize: 13 }
-}
-
 export default function LoginPage() {
   const nav = useNavigate()
   const [mode,     setMode]     = useState<'login' | 'register'>('login')
@@ -40,30 +28,60 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <div style={styles.title}>🛡 Family Guard</div>
-        <div style={styles.sub}>{mode === 'login' ? 'Sign in to your account' : 'Create a new account'}</div>
-        {error && <div style={styles.error}>{error}</div>}
-        <form onSubmit={submit}>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white flex items-center justify-center px-4">
+      <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl p-8">
+        <h1 className="text-2xl font-bold text-gray-900 mb-1">&#x1F6E1; Family Guard</h1>
+        <p className="text-sm text-gray-500 mb-6">
+          {mode === 'login' ? 'Sign in to your account' : 'Create a new account'}
+        </p>
+
+        {error && (
+          <div className="mb-4 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={submit} className="space-y-4">
           {mode === 'register' && (
-            <>
-              <label style={styles.label}>Name</label>
-              <input style={styles.input} value={name} onChange={e => setName(e.target.value)} required />
-            </>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Name</label>
+              <input
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                value={name} onChange={e => setName(e.target.value)} required
+              />
+            </div>
           )}
-          <label style={styles.label}>Email</label>
-          <input style={styles.input} type="email" value={email} onChange={e => setEmail(e.target.value)} required />
-          <label style={styles.label}>Password</label>
-          <input style={styles.input} type="password" value={password} onChange={e => setPassword(e.target.value)} required />
-          <button style={styles.btn} type="submit" disabled={loading}>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Email</label>
+            <input
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              type="email" value={email} onChange={e => setEmail(e.target.value)} required
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Password</label>
+            <input
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              type="password" value={password} onChange={e => setPassword(e.target.value)} required
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-semibold rounded-lg transition-colors"
+          >
             {loading ? 'Loading...' : mode === 'login' ? 'Sign In' : 'Create Account'}
           </button>
         </form>
-        <div style={styles.toggle} onClick={() => setMode(m => m === 'login' ? 'register' : 'login')}>
+
+        <p
+          className="mt-4 text-center text-sm text-indigo-600 cursor-pointer hover:underline"
+          onClick={() => setMode(m => m === 'login' ? 'register' : 'login')}
+        >
           {mode === 'login' ? "Don't have an account? Register" : 'Already have an account? Login'}
-        </div>
+        </p>
       </div>
     </div>
   )
 }
+

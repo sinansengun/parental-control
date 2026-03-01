@@ -2,23 +2,11 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getDevices, registerDevice, Device } from '../api/api'
 
-const s: Record<string, React.CSSProperties> = {
-  page:    { minHeight: '100vh', padding: 32 },
-  header:  { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 },
-  title:   { fontSize: 22, fontWeight: 700 },
-  btn:     { padding: '8px 18px', background: '#4f46e5', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 },
-  logoutBtn: { padding: '8px 18px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 },
-  grid:    { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 16 },
-  card:    { background: '#fff', padding: 20, borderRadius: 12, boxShadow: '0 2px 12px rgba(0,0,0,.08)', cursor: 'pointer' },
-  dname:   { fontWeight: 700, marginBottom: 8 },
-  token:   { fontSize: 11, color: '#888', wordBreak: 'break-all' },
-  msg:     { color: '#888', marginTop: 40, textAlign: 'center' }
-}
-
 export default function Dashboard() {
   const nav = useNavigate()
   const [devices, setDevices] = useState<Device[]>([])
   const [loading, setLoading] = useState(true)
+  const [copied, setCopied] = useState<number | null>(null)
 
   useEffect(() => {
     getDevices()
@@ -26,6 +14,14 @@ export default function Dashboard() {
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
+
+  const copyToken = (e: React.MouseEvent, deviceId: number, token: string) => {
+    e.stopPropagation()
+    navigator.clipboard.writeText(token).then(() => {
+      setCopied(deviceId)
+      setTimeout(() => setCopied(null), 2000)
+    })
+  }
 
   const addDevice = async () => {
     const name = prompt('Device name (e.g. "Ali\'s Phone"):')
@@ -38,28 +34,62 @@ export default function Dashboard() {
   const logout = () => { localStorage.removeItem('token'); nav('/login') }
 
   return (
-    <div style={s.page}>
-      <div style={s.header}>
-        <div style={s.title}>🛡 Family Guard — Devices</div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button style={s.btn} onClick={addDevice}>+ Add Device</button>
-          <button style={s.logoutBtn} onClick={logout}>Logout</button>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+        <h1 className="text-lg font-bold text-gray-900">&#x1F6E1; Family Guard</h1>
+        <div className="flex gap-2">
+          <button
+            onClick={addDevice}
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors"
+          >
+            + Add Device
+          </button>
+          <button
+            onClick={logout}
+            className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-lg transition-colors"
+          >
+            Logout
+          </button>
         </div>
-      </div>
+      </header>
 
-      {loading && <p style={s.msg}>Loading...</p>}
-      {!loading && devices.length === 0 && (
-        <p style={s.msg}>No devices yet. Click "+ Add Device" to register a child's device.</p>
-      )}
+      <main className="p-6">
+        {loading && <p className="text-center text-gray-400 mt-20">Loading...</p>}
+        {!loading && devices.length === 0 && (
+          <p className="text-center text-gray-400 mt-20">
+            No devices yet. Click "+ Add Device" to register a child's device.
+          </p>
+        )}
 
-      <div style={s.grid}>
-        {devices.map(d => (
-          <div key={d.id} style={s.card} onClick={() => nav(`/device/${d.id}`)}>
-            <div style={s.dname}>📱 {d.name}</div>
-            <div style={s.token}>Token: {d.deviceToken}</div>
-          </div>
-        ))}
-      </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {devices.map(d => (
+            <div
+              key={d.id}
+              onClick={() => nav(`/device/${d.id}`)}
+              className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 cursor-pointer hover:shadow-md hover:border-indigo-200 transition-all"
+            >
+              <p className="font-semibold text-gray-800 mb-3">&#x1F4F1; {d.name}</p>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-400 truncate flex-1 font-mono">{d.deviceToken}</span>
+                <button
+                  onClick={(e) => copyToken(e, d.id, d.deviceToken)}
+                  className={`flex-shrink-0 px-2 py-1 text-xs rounded-md font-medium transition-colors ${
+                    copied === d.id
+                      ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
+                      : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
+                  }`}
+                >
+                  {copied === d.id ? '✓ Copied' : 'Copy'}
+                </button>
+              </div>
+              <p className="text-xs text-gray-400 mt-3">
+                Registered {new Date(d.registeredAt).toLocaleDateString()}
+              </p>
+            </div>
+          ))}
+        </div>
+      </main>
     </div>
   )
 }

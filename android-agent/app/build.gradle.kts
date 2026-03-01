@@ -13,8 +13,19 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
+    }
 
-        buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:8080/api/v1/\"")
+    flavorDimensions += "env"
+    productFlavors {
+        create("emulator") {
+            dimension = "env"
+            buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:8080/api/v1/\"")
+        }
+        create("device") {
+            dimension = "env"
+            // Bilgisayarının Wi-Fi IP'sini buraya yaz (ipconfig ile öğren)
+            buildConfigField("String", "BASE_URL", "\"http://192.168.68.112:8080/api/v1/\"")
+        }
     }
 
     buildFeatures {
@@ -50,4 +61,7 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.11.0")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
+
+    // LocalBroadcastManager (AppLog UI updates)
+    implementation("androidx.localbroadcastmanager:localbroadcastmanager:1.1.0")
 }

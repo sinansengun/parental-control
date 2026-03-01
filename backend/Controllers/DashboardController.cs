@@ -102,7 +102,7 @@ public class DashboardController(AppDbContext db) : ControllerBase
         return Ok(data);
     }
 
-    // ── WhatsApp ───────────────────────────────────────────────────────────────
+    // ── WhatsApp notifications ─────────────────────────────────────────────────
 
     [HttpGet("devices/{deviceId:int}/whatsapp")]
     public async Task<IActionResult> GetWhatsApp(int deviceId, [FromQuery] int limit = 100)
@@ -114,6 +114,23 @@ public class DashboardController(AppDbContext db) : ControllerBase
             .OrderByDescending(w => w.Timestamp)
             .Take(limit)
             .Select(w => new WhatsAppDto(w.Sender, w.Message, w.Timestamp))
+            .ToListAsync();
+
+        return Ok(data);
+    }
+
+    // ── WhatsApp chats (accessibility) ─────────────────────────────────────────
+
+    [HttpGet("devices/{deviceId:int}/whatsapp/chats")]
+    public async Task<IActionResult> GetWhatsAppChats(int deviceId, [FromQuery] int limit = 200)
+    {
+        if (!await OwnsDeviceAsync(deviceId)) return Forbid();
+
+        var data = await db.WhatsAppChats
+            .Where(w => w.DeviceId == deviceId)
+            .OrderByDescending(w => w.Timestamp)
+            .Take(limit)
+            .Select(w => new WhatsAppChatDto(w.Chat, w.Sender, w.Message, w.Timestamp))
             .ToListAsync();
 
         return Ok(data);

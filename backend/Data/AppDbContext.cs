@@ -5,12 +5,13 @@ namespace ParentalControl.Backend.Data;
 
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
-    public DbSet<User>           Users        => Set<User>();
-    public DbSet<Device>         Devices      => Set<Device>();
-    public DbSet<LocationLog>    Locations    => Set<LocationLog>();
-    public DbSet<CallLogEntry>   CallLogs     => Set<CallLogEntry>();
-    public DbSet<SmsEntry>       SmsLogs      => Set<SmsEntry>();
-    public DbSet<WhatsAppMessage> WhatsAppMsgs => Set<WhatsAppMessage>();
+    public DbSet<User>            Users         => Set<User>();
+    public DbSet<Device>          Devices       => Set<Device>();
+    public DbSet<LocationLog>     Locations     => Set<LocationLog>();
+    public DbSet<CallLogEntry>    CallLogs      => Set<CallLogEntry>();
+    public DbSet<SmsEntry>        SmsLogs       => Set<SmsEntry>();
+    public DbSet<WhatsAppMessage> WhatsAppMsgs  => Set<WhatsAppMessage>();
+    public DbSet<WhatsAppChatMsg> WhatsAppChats => Set<WhatsAppChatMsg>();
 
     protected override void OnModelCreating(ModelBuilder mb)
     {

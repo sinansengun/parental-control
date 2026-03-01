@@ -14,7 +14,8 @@ export interface Device       { id: number; name: string; deviceToken: string; r
 export interface LocationDto  { latitude: number; longitude: number; accuracy: number; timestamp: number }
 export interface CallLogDto   { number: string; name: string; type: number; date: number; duration: number }
 export interface SmsDto       { address: string; body: string; date: number; type: number }
-export interface WhatsAppDto  { sender: string; message: string; timestamp: number }
+export interface WhatsAppDto      { sender: string; message: string; timestamp: number }
+export interface WhatsAppChatDto  { chat: string; sender: string; message: string; timestamp: number }
 
 // Auth
 export const login    = (email: string, password: string) =>
@@ -42,3 +43,6 @@ export const getSmsLogs   = (deviceId: number) =>
 
 export const getWhatsApp  = (deviceId: number) =>
   http.get<WhatsAppDto[]>(`/dashboard/devices/${deviceId}/whatsapp`)
+
+export const getWhatsAppChats = (deviceId: number) =>
+  http.get<WhatsAppChatDto[]>(`/dashboard/devices/${deviceId}/whatsapp/chats`)

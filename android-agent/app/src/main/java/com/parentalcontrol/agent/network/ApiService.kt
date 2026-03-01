@@ -34,6 +34,13 @@ data class WhatsAppMessagePayload(
     val timestamp: Long
 )
 
+data class WhatsAppChatPayload(
+    val chat: String,
+    val sender: String,
+    val message: String,
+    val timestamp: Long
+)
+
 // ---------- Service ----------
 
 interface ApiService {
@@ -49,4 +56,7 @@ interface ApiService {
 
     @POST("agent/whatsapp")
     suspend fun sendWhatsAppMessage(@Body payload: WhatsAppMessagePayload): Response<Unit>
+
+    @POST("agent/whatsapp/chat")
+    suspend fun sendWhatsAppChat(@Body payload: WhatsAppChatPayload): Response<Unit>
 }

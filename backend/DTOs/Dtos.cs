@@ -32,6 +32,8 @@ public record SmsPayload(string Address, string Body, long Date, int Type);
 
 public record WhatsAppPayload(string Sender, string Message, long Timestamp);
 
+public record WhatsAppChatPayload(string Chat, string Sender, string Message, long Timestamp);
+
 // ── Dashboard responses ───────────────────────────────────────────────────────
 public record LocationDto(double Latitude, double Longitude, float Accuracy, long Timestamp);
 
@@ -40,3 +42,5 @@ public record CallLogDto(string Number, string Name, int Type, long Date, long D
 public record SmsDto(string Address, string Body, long Date, int Type);
 
 public record WhatsAppDto(string Sender, string Message, long Timestamp);
+
+public record WhatsAppChatDto(string Chat, string Sender, string Message, long Timestamp);

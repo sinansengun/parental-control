@@ -1,17 +1,23 @@
 package com.parentalcontrol.agent
 
 import android.Manifest
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.widget.Button
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.work.*
 import com.parentalcontrol.agent.service.LocationTrackingService
 import com.parentalcontrol.agent.service.SyncWorker
@@ -29,6 +35,15 @@ class MainActivity : AppCompatActivity() {
         Manifest.permission.READ_SMS
     )
     private val PERM_CODE = 1001
+
+    private var tvLog: TextView? = null
+    private var scrollLog: ScrollView? = null
+
+    private val logReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            refreshLog()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -72,8 +87,42 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnAccessibility.setOnClickListener {
-            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
         }
+
+        // Update button label based on current state
+        if (isNotificationListenerEnabled()) {
+            btnAccessibility.text = "WhatsApp Notifications ✓"
+        }
+
+        // Bind log views
+        tvLog     = findViewById(R.id.tvLog)
+        scrollLog = findViewById(R.id.scrollLog)
+        refreshLog()
+    }
+
+    private fun refreshLog() {
+        val entries = AppLog.getAll()
+        tvLog?.text = if (entries.isEmpty()) "No sync activity yet."
+                      else entries.joinToString("\n")
+        scrollLog?.post { scrollLog?.fullScroll(ScrollView.FOCUS_DOWN) }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        LocalBroadcastManager.getInstance(this)
+            .registerReceiver(logReceiver, IntentFilter(AppLog.ACTION_LOG_UPDATED))
+        refreshLog()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(logReceiver)
+    }
+
+    private fun isNotificationListenerEnabled(): Boolean {
+        return NotificationManagerCompat.getEnabledListenerPackages(this)
+            .contains(packageName)
     }
 
     private fun hasPermissions() = PERMISSIONS.all {

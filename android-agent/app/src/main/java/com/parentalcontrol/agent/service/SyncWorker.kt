@@ -6,6 +6,7 @@ import android.provider.Telephony
 import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.parentalcontrol.agent.AppLog
 import com.parentalcontrol.agent.TokenStore
 import com.parentalcontrol.agent.network.ApiClient
 import com.parentalcontrol.agent.network.CallLogEntry
@@ -28,9 +29,11 @@ class SyncWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, 
         return try {
             syncCallLogs()
             syncSms()
+            AppLog.add(applicationContext, "✓ Sync completed")
             Result.success()
         } catch (e: Exception) {
             Log.e(TAG, "Sync failed: ${e.message}", e)
+            AppLog.add(applicationContext, "✗ Sync failed: ${e.message}")
             Result.retry()
         }
     }
@@ -71,6 +74,7 @@ class SyncWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, 
             Log.d(TAG, "Sending ${entries.size} call log(s)")
             ApiClient.service.sendCallLogs(entries)
             Log.d(TAG, "Call logs sent OK")
+            AppLog.add(applicationContext, "📞 ${entries.size} call(s) sent")
         } else {
             Log.d(TAG, "No call logs found on device")
         }
@@ -109,6 +113,7 @@ class SyncWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, 
             Log.d(TAG, "Sending ${entries.size} SMS log(s)")
             ApiClient.service.sendSmsLogs(entries)
             Log.d(TAG, "SMS logs sent OK")
+            AppLog.add(applicationContext, "💬 ${entries.size} SMS sent")
         } else {
             Log.d(TAG, "No SMS logs found on device")
         }

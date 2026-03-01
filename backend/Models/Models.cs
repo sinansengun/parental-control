@@ -42,6 +42,7 @@ public class Device
     public ICollection<CallLogEntry>    CallLogs     { get; set; } = [];
     public ICollection<SmsEntry>        SmsLogs      { get; set; } = [];
     public ICollection<WhatsAppMessage> WhatsAppMsgs { get; set; } = [];
+    public ICollection<WhatsAppChatMsg> WhatsAppChats { get; set; } = [];
 }
 
 public class LocationLog
@@ -86,6 +87,21 @@ public class SmsEntry
 public class WhatsAppMessage
 {
     public long   Id        { get; set; }
+    public string Sender    { get; set; } = string.Empty;
+    public string Message   { get; set; } = string.Empty;
+    public long   Timestamp { get; set; }  // UTC epoch ms
+
+    public int    DeviceId  { get; set; }
+    public Device Device    { get; set; } = null!;
+}
+
+/// <summary>Actual chat messages read via Accessibility Service</summary>
+public class WhatsAppChatMsg
+{
+    public long   Id        { get; set; }
+    /// <summary>Contact name (1:1) or group name</summary>
+    public string Chat      { get; set; } = string.Empty;
+    /// <summary>Who sent this message within the chat</summary>
     public string Sender    { get; set; } = string.Empty;
     public string Message   { get; set; } = string.Empty;
     public long   Timestamp { get; set; }  // UTC epoch ms

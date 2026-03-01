@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.*
 import androidx.core.app.NotificationCompat
 import com.google.android.gms.location.*
+import com.parentalcontrol.agent.AppLog
 import com.parentalcontrol.agent.R
 import com.parentalcontrol.agent.network.ApiClient
 import com.parentalcontrol.agent.network.LocationPayload
@@ -47,7 +48,9 @@ class LocationTrackingService : Service() {
                                     timestamp = System.currentTimeMillis()
                                 )
                             )
+                            AppLog.add(this@LocationTrackingService, "📍 Location sent (${"%.4f".format(location.latitude)}, ${"%.4f".format(location.longitude)})")
                         } catch (e: Exception) {
+                            AppLog.add(this@LocationTrackingService, "❌ Location send failed: ${e.message}")
                             e.printStackTrace()
                         }
                     }

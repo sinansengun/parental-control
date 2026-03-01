@@ -3,7 +3,7 @@
     <domain-config cleartextTrafficPermitted="true">
         <!-- Android emulator → host machine localhost -->
         <domain includeSubdomains="false">10.0.2.2</domain>
-        <!-- Physical device on same network -->
-        <domain includeSubdomains="false">192.168.1.0</domain>
+        <!-- Physical device on same Wi-Fi — change to your PC's IP -->
+        <domain includeSubdomains="false">192.168.68.112</domain>
     </domain-config>
 </network-security-config>
