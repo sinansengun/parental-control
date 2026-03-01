@@ -86,13 +86,17 @@ public class SmsEntry
 
 public class WhatsAppMessage
 {
-    public long   Id        { get; set; }
-    public string Sender    { get; set; } = string.Empty;
-    public string Message   { get; set; } = string.Empty;
-    public long   Timestamp { get; set; }  // UTC epoch ms
+    public long   Id         { get; set; }
+    public string AppPackage { get; set; } = string.Empty;
+    public string AppName    { get; set; } = string.Empty;
+    /// <summary>Base64-encoded 48x48 PNG icon, may be empty.</summary>
+    public string AppIcon    { get; set; } = string.Empty;
+    public string Sender     { get; set; } = string.Empty;
+    public string Message    { get; set; } = string.Empty;
+    public long   Timestamp  { get; set; }  // UTC epoch ms
 
-    public int    DeviceId  { get; set; }
-    public Device Device    { get; set; } = null!;
+    public int    DeviceId   { get; set; }
+    public Device Device     { get; set; } = null!;
 }
 
 /// <summary>Actual chat messages read via Accessibility Service</summary>

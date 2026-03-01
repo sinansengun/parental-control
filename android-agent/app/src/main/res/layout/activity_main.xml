@@ -56,11 +56,21 @@
         android:layout_marginBottom="8dp" />
 
     <Button
+        android:id="@+id/btnNotifications"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="Enable Notifications"
+        android:backgroundTint="#37474F"
+        android:textColor="#FFFFFF"
+        android:textSize="13sp"
+        android:layout_marginBottom="8dp" />
+
+    <Button
         android:id="@+id/btnAccessibility"
         android:layout_width="match_parent"
         android:layout_height="48dp"
-        android:text="Enable WhatsApp Notifications"
-        android:backgroundTint="#37474F"
+        android:text="Enable Accessibility Service"
+        android:backgroundTint="#4E342E"
         android:textColor="#FFFFFF"
         android:textSize="13sp"
         android:layout_marginBottom="12dp" />

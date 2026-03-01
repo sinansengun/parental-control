@@ -36,8 +36,16 @@ private val BLOCKED_NAMES = setOf(
     "son gorulme", "last seen", "cevrimici", "online", "yaziyor...", "typing...",
     "yeni grup", "new group", "yeni yayin", "new broadcast",
     "linked devices", "bagli cihazlar", "whatsapp web",
-    "ayarlar", "settings", "aramalar", "calls", "topluluklar", "communities"
+    "ayarlar", "settings", "aramalar", "calls", "topluluklar", "communities",
+    "durum", "status", "ara\u2026", "ara...", "search", "cevapsiz sesli arama",
+    "missed voice call", "cevapsiz goruntulu arama", "missed video call",
+    "takip edebileceginiz kanallar bulun", "find channels you can follow"
 )
+
+// Matches pure timestamps like "21:49", "9:05", "15:24 PM" etc.
+private val TIMESTAMP_RE = Regex("""^\d{1,2}:\d{2}(\s*(AM|PM))?$""", RegexOption.IGNORE_CASE)
+// Matches date strings like "27.02.2026", "Dün", "Yesterday", "Pazartesi" etc.
+private val DATE_RE = Regex("""^\d{1,2}[./]\d{1,2}([./]\d{2,4})?$|^(dün|yesterday|pazartesi|salı|çarşamba|perşembe|cuma|cumartesi|pazar|monday|tuesday|wednesday|thursday|friday|saturday|sunday)$""", RegexOption.IGNORE_CASE)
 
 /**
  * Reads actual WhatsApp chat messages from the screen using AccessibilityService.
@@ -135,19 +143,18 @@ class WhatsAppAccessibilityService : AccessibilityService() {
             msgNodes.addAll(root.findAccessibilityNodeInfosByViewId(id))
         }
 
+        // Tree fallback disabled — too noisy (captures contact list, timestamps, etc.)
         if (msgNodes.isEmpty()) {
-            Log.w(TAG, "No message nodes via viewId, using tree fallback for '$currentChat'")
-            AppLog.add(applicationContext, "WA: viewId miss, tree scan")
-            collectTextNodes(root, msgNodes)
+            Log.d(TAG, "No message nodes found via viewId for '$currentChat', skipping")
+            return
         }
 
         Log.d(TAG, "Found ${msgNodes.size} nodes in '$currentChat'")
 
         for (node in msgNodes) {
             val text = node.text?.toString()?.trim() ?: continue
-            if (text.length < 2) continue
-            if (text.lowercase() in BLOCKED_NAMES) continue
-            val sender = findSenderForMessage(node) ?: currentChat
+            if (!isValidMessage(text)) continue
+            val sender = findSenderForMessage(node) ?: currentChat   // unknown → assume incoming
             messages.add(sender to text)
         }
 
@@ -188,6 +195,19 @@ class WhatsAppAccessibilityService : AccessibilityService() {
         }
     }
 
+    private fun isValidMessage(text: String): Boolean {
+        if (text.length < 2) return false
+        val lower = text.lowercase().trim()
+        if (lower in BLOCKED_NAMES) return false
+        if (TIMESTAMP_RE.matches(text.trim())) return false
+        if (DATE_RE.matches(lower)) return false
+        // Filter single emoji or single characters
+        if (text.trim().codePointCount(0, text.trim().length) == 1) return false
+        // Filter if text matches current chat name exactly (contact names showing up as messages)
+        if (lower == currentChat.lowercase()) return false
+        return true
+    }
+
     private fun collectTextNodes(node: AccessibilityNodeInfo, out: MutableList<AccessibilityNodeInfo>) {
         if (node.childCount == 0 && !node.text.isNullOrBlank()) {
             out.add(node)
@@ -199,18 +219,31 @@ class WhatsAppAccessibilityService : AccessibilityService() {
     }
 
     private fun findSenderForMessage(msgNode: AccessibilityNodeInfo): String? {
-        val parent = msgNode.parent ?: return null
-        for (id in SENDER_IDS) {
-            parent.findAccessibilityNodeInfosByViewId(id).firstOrNull()?.let { n ->
-                val name = n.text?.toString()?.trim()
-                if (!name.isNullOrBlank() && name.lowercase() !in BLOCKED_NAMES) return name
-            }
-            parent.parent?.findAccessibilityNodeInfosByViewId(id)?.firstOrNull()?.let { n ->
-                val name = n.text?.toString()?.trim()
-                if (!name.isNullOrBlank() && name.lowercase() !in BLOCKED_NAMES) return name
+        // ── 1. Explicit sender label (group chats) ───────────────────────────
+        var node: AccessibilityNodeInfo? = msgNode
+        repeat(6) {
+            node = node?.parent ?: return@repeat
+            for (id in SENDER_IDS) {
+                node?.findAccessibilityNodeInfosByViewId(id)?.firstOrNull()?.let { n ->
+                    val name = n.text?.toString()?.trim()
+                    if (!name.isNullOrBlank() && name.lowercase() !in BLOCKED_NAMES) return name
+                }
             }
         }
-        return null
+
+        // ── 2. Content description heuristic ("Sent" / "Gönderildi") ────────
+        val cd = msgNode.contentDescription?.toString()?.lowercase() ?: ""
+        if (cd.contains("sent") || cd.contains("gönderildi") || cd.contains("gonderildi")) {
+            return "__me__"
+        }
+
+        // ── 3. Position on screen — right-half = outgoing ────────────────────
+        val metrics = applicationContext.resources.displayMetrics
+        val screenWidth = metrics.widthPixels
+        val rect = android.graphics.Rect()
+        msgNode.getBoundsInScreen(rect)
+        Log.v(TAG, "Msg bounds: left=${rect.left} right=${rect.right} screenW=$screenWidth text=${msgNode.text?.take(20)}")
+        return if (rect.left > screenWidth / 2) "__me__" else currentChat
     }
 
     override fun onInterrupt() {}

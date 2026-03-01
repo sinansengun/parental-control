@@ -67,9 +67,10 @@ class MainActivity : AppCompatActivity() {
     private fun initMainScreen() {
         setContentView(R.layout.activity_main)
 
-        val tvStatus      = findViewById<TextView>(R.id.tvStatus)
-        val tvDeviceToken = findViewById<TextView>(R.id.tvDeviceToken)
-        val btnActivate   = findViewById<Button>(R.id.btnActivate)
+        val tvStatus         = findViewById<TextView>(R.id.tvStatus)
+        val tvDeviceToken    = findViewById<TextView>(R.id.tvDeviceToken)
+        val btnActivate      = findViewById<Button>(R.id.btnActivate)
+        val btnNotifications = findViewById<Button>(R.id.btnNotifications)
         val btnAccessibility = findViewById<Button>(R.id.btnAccessibility)
 
         // Show masked token for reference
@@ -86,13 +87,20 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        btnAccessibility.setOnClickListener {
+        btnNotifications.setOnClickListener {
             startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
         }
 
-        // Update button label based on current state
+        btnAccessibility.setOnClickListener {
+            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+        }
+
+        // Update button labels based on current state
         if (isNotificationListenerEnabled()) {
-            btnAccessibility.text = "WhatsApp Notifications ✓"
+            btnNotifications.text = "Notifications ✓"
+        }
+        if (isAccessibilityServiceEnabled()) {
+            btnAccessibility.text = "Accessibility Service ✓"
         }
 
         // Bind log views
@@ -113,6 +121,11 @@ class MainActivity : AppCompatActivity() {
         LocalBroadcastManager.getInstance(this)
             .registerReceiver(logReceiver, IntentFilter(AppLog.ACTION_LOG_UPDATED))
         refreshLog()
+        // Update button states when returning from Settings
+        findViewById<Button>(R.id.btnNotifications)?.text =
+            if (isNotificationListenerEnabled()) "Notifications \u2713" else "Enable Notifications"
+        findViewById<Button>(R.id.btnAccessibility)?.text =
+            if (isAccessibilityServiceEnabled()) "Accessibility Service \u2713" else "Enable Accessibility Service"
     }
 
     override fun onPause() {
@@ -123,6 +136,14 @@ class MainActivity : AppCompatActivity() {
     private fun isNotificationListenerEnabled(): Boolean {
         return NotificationManagerCompat.getEnabledListenerPackages(this)
             .contains(packageName)
+    }
+
+    private fun isAccessibilityServiceEnabled(): Boolean {
+        val expectedService = "$packageName/com.parentalcontrol.agent.service.WhatsAppAccessibilityService"
+        val enabled = Settings.Secure.getString(
+            contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+        ) ?: return false
+        return enabled.split(':').any { it.equals(expectedService, ignoreCase = true) }
     }
 
     private fun hasPermissions() = PERMISSIONS.all {

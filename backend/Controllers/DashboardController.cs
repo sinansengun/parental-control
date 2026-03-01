@@ -113,7 +113,7 @@ public class DashboardController(AppDbContext db) : ControllerBase
             .Where(w => w.DeviceId == deviceId)
             .OrderByDescending(w => w.Timestamp)
             .Take(limit)
-            .Select(w => new WhatsAppDto(w.Sender, w.Message, w.Timestamp))
+            .Select(w => new WhatsAppDto(w.AppPackage, w.AppName, w.AppIcon == "" ? null : w.AppIcon, w.Sender, w.Message, w.Timestamp))
             .ToListAsync();
 
         return Ok(data);

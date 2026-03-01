@@ -14,7 +14,7 @@ export interface Device       { id: number; name: string; deviceToken: string; r
 export interface LocationDto  { latitude: number; longitude: number; accuracy: number; timestamp: number }
 export interface CallLogDto   { number: string; name: string; type: number; date: number; duration: number }
 export interface SmsDto       { address: string; body: string; date: number; type: number }
-export interface WhatsAppDto      { sender: string; message: string; timestamp: number }
+export interface WhatsAppDto      { appPackage: string; appName: string; appIcon?: string; sender: string; message: string; timestamp: number }
 export interface WhatsAppChatDto  { chat: string; sender: string; message: string; timestamp: number }
 
 // Auth

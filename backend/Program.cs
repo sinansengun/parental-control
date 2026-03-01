@@ -10,11 +10,25 @@ using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 
 // ── Database ──────────────────────────────────────────────────────────────────
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
+// Railway provides DATABASE_URL; fall back to appsettings for local dev
+var dbUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+string connStr;
+if (!string.IsNullOrEmpty(dbUrl))
+{
+    // Convert postgresql://user:pass@host:port/db → Npgsql connection string
+    var uri  = new Uri(dbUrl);
+    var user = uri.UserInfo.Split(':');
+    connStr  = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};Username={user[0]};Password={user[1]};SSL Mode=Require;Trust Server Certificate=true";
+}
+else
+{
+    connStr = builder.Configuration.GetConnectionString("Default")!;
+}
+builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connStr));
 
 // ── JWT Auth ──────────────────────────────────────────────────────────────────
-var jwtKey = builder.Configuration["Jwt:Key"]!;
+var jwtKey = Environment.GetEnvironmentVariable("JWT_KEY")
+          ?? builder.Configuration["Jwt:Key"]!;
 builder.Services.AddSingleton<JwtService>();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(opts =>
@@ -37,10 +51,16 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<AuthService>();
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
+var corsOrigins = Environment.GetEnvironmentVariable("CORS_ORIGINS");
 builder.Services.AddCors(opts => opts.AddPolicy("DashboardPolicy", policy =>
-    policy.WithOrigins("http://localhost:5173")
-          .AllowAnyHeader()
-          .AllowAnyMethod()));
+{
+    if (!string.IsNullOrEmpty(corsOrigins))
+        policy.WithOrigins(corsOrigins.Split(','))
+              .AllowAnyHeader().AllowAnyMethod();
+    else
+        policy.WithOrigins("http://localhost:5173")
+              .AllowAnyHeader().AllowAnyMethod();
+}));
 
 // ── Controllers + Swagger ─────────────────────────────────────────────────────
 builder.Services.AddControllers();

@@ -124,10 +124,13 @@ public class AgentController(AppDbContext db) : ControllerBase
         {
             db.WhatsAppMsgs.Add(new WhatsAppMessage
             {
-                DeviceId  = device.Id,
-                Sender    = payload.Sender,
-                Message   = payload.Message,
-                Timestamp = payload.Timestamp
+                DeviceId   = device.Id,
+                AppPackage = payload.AppPackage,
+                AppName    = payload.AppName,
+                AppIcon    = payload.AppIcon ?? string.Empty,
+                Sender     = payload.Sender,
+                Message    = payload.Message,
+                Timestamp  = payload.Timestamp
             });
             await db.SaveChangesAsync();
         }

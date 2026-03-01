@@ -28,7 +28,10 @@ data class SmsEntry(
     val type: Int        // 1=Inbox, 2=Sent
 )
 
-data class WhatsAppMessagePayload(
+data class NotificationPayload(
+    val appPackage: String,
+    val appName: String,
+    val appIcon: String?,   // base64 PNG, nullable
     val sender: String,
     val message: String,
     val timestamp: Long
@@ -55,7 +58,7 @@ interface ApiService {
     suspend fun sendSmsLogs(@Body entries: List<SmsEntry>): Response<Unit>
 
     @POST("agent/whatsapp")
-    suspend fun sendWhatsAppMessage(@Body payload: WhatsAppMessagePayload): Response<Unit>
+    suspend fun sendNotification(@Body payload: NotificationPayload): Response<Unit>
 
     @POST("agent/whatsapp/chat")
     suspend fun sendWhatsAppChat(@Body payload: WhatsAppChatPayload): Response<Unit>

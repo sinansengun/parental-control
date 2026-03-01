@@ -8,7 +8,7 @@ namespace ParentalControl.Backend.Security;
 
 public class JwtService(IConfiguration config)
 {
-    private readonly string _key      = config["Jwt:Key"]!;
+    private readonly string _key      = Environment.GetEnvironmentVariable("JWT_KEY") ?? config["Jwt:Key"]!;
     private readonly string _issuer   = config["Jwt:Issuer"]!;
     private readonly string _audience = config["Jwt:Audience"]!;
     private readonly int    _expMins  = int.Parse(config["Jwt:ExpirationMinutes"] ?? "1440");
