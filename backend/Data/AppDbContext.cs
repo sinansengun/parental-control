@@ -12,11 +12,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<SmsEntry>        SmsLogs       => Set<SmsEntry>();
     public DbSet<WhatsAppMessage> WhatsAppMsgs  => Set<WhatsAppMessage>();
     public DbSet<WhatsAppChatMsg> WhatsAppChats => Set<WhatsAppChatMsg>();
+    public DbSet<InstalledApp>    InstalledApps => Set<InstalledApp>();
 
     protected override void OnModelCreating(ModelBuilder mb)
     {
         mb.Entity<User>().HasIndex(u => u.Email).IsUnique();
         mb.Entity<Device>().HasIndex(d => d.DeviceToken).IsUnique();
+        mb.Entity<InstalledApp>().HasIndex(a => new { a.DeviceId, a.PackageName }).IsUnique();
 
         mb.Entity<Device>()
             .HasOne(d => d.User)

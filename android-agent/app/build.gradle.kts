@@ -19,7 +19,7 @@ android {
     productFlavors {
         create("emulator") {
             dimension = "env"
-            buildConfigField("String", "BASE_URL", "\"https://backend-production-17b0.up.railway.app/api/v1/\"")
+            buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:8080/api/v1/\"")
         }
         create("device") {
             dimension = "env"

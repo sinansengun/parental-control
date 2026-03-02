@@ -86,6 +86,12 @@ export default function Dashboard() {
               <p className="text-xs text-gray-400 mt-3">
                 Registered {new Date(d.registeredAt).toLocaleDateString()}
               </p>
+              {d.lastActivityAt
+                ? <p className="text-xs text-emerald-600 mt-1">
+                    Last activity: {new Date(d.lastActivityAt).toLocaleString()}
+                  </p>
+                : <p className="text-xs text-gray-300 mt-1">No activity yet</p>
+              }
             </div>
           ))}
         </div>

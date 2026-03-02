@@ -167,4 +167,46 @@ public class AgentController(AppDbContext db) : ControllerBase
         }
         return NoContent();
     }
+
+    // ── Installed Apps ────────────────────────────────────────────────────
+    [HttpPost("apps")]
+    public async Task<IActionResult> PostInstalledApps([FromBody] List<InstalledAppPayload> entries)
+    {
+        var device = await ResolveDeviceAsync();
+        if (device is null) return Unauthorized();
+
+        var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+        // Upsert: update existing, insert new
+        var existingMap = await db.InstalledApps
+            .Where(a => a.DeviceId == device.Id)
+            .ToDictionaryAsync(a => a.PackageName);
+
+        foreach (var e in entries)
+        {
+            if (existingMap.TryGetValue(e.PackageName, out var existing))
+            {
+                existing.AppName    = e.AppName;
+                existing.Version    = e.Version;
+                existing.LastSeenAt = now;
+                if (e.IconBase64 is not null) existing.IconBase64 = e.IconBase64;
+            }
+            else
+            {
+                db.InstalledApps.Add(new InstalledApp
+                {
+                    DeviceId    = device.Id,
+                    PackageName = e.PackageName,
+                    AppName     = e.AppName,
+                    Version     = e.Version,
+                    InstalledAt = e.InstalledAt,
+                    LastSeenAt  = now,
+                    IconBase64  = e.IconBase64
+                });
+            }
+        }
+
+        await db.SaveChangesAsync();
+        return NoContent();
+    }
 }

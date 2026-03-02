@@ -21,10 +21,27 @@ public class DashboardController(AppDbContext db) : ControllerBase
     [HttpGet("devices")]
     public async Task<IActionResult> GetDevices()
     {
-        var devices = await db.Devices
+        var raw = await db.Devices
             .Where(d => d.UserId == CurrentUserId)
-            .Select(d => new DeviceResponse(d.Id, d.Name, d.DeviceToken, d.RegisteredAt))
+            .Select(d => new
+            {
+                d.Id, d.Name, d.DeviceToken, d.RegisteredAt,
+                LastLoc    = d.Locations    .Max(l => (long?)l.Timestamp),
+                LastCall   = d.CallLogs     .Max(c => (long?)c.Date),
+                LastSms    = d.SmsLogs      .Max(s => (long?)s.Date),
+                LastWa     = d.WhatsAppMsgs .Max(w => (long?)w.Timestamp),
+                LastWaChat = d.WhatsAppChats.Max(w => (long?)w.Timestamp),
+            })
             .ToListAsync();
+
+        var devices = raw.Select(d =>
+        {
+            var candidates = new[] { d.LastLoc, d.LastCall, d.LastSms, d.LastWa, d.LastWaChat }
+                .Where(x => x.HasValue).Select(x => x!.Value).ToList();
+            long? lastActivity = candidates.Count > 0 ? candidates.Max() : null;
+            return new DeviceResponse(d.Id, d.Name, d.DeviceToken, d.RegisteredAt, lastActivity);
+        }).ToList();
+
         return Ok(devices);
     }
 
@@ -34,7 +51,7 @@ public class DashboardController(AppDbContext db) : ControllerBase
         var device = new Device { Name = req.Name, UserId = CurrentUserId };
         db.Devices.Add(device);
         await db.SaveChangesAsync();
-        return Ok(new DeviceResponse(device.Id, device.Name, device.DeviceToken, device.RegisteredAt));
+        return Ok(new DeviceResponse(device.Id, device.Name, device.DeviceToken, device.RegisteredAt, null));
     }
 
     // ── Location ───────────────────────────────────────────────────────────────
@@ -139,4 +156,20 @@ public class DashboardController(AppDbContext db) : ControllerBase
     // ── Helper ─────────────────────────────────────────────────────────────────
     private async Task<bool> OwnsDeviceAsync(int deviceId) =>
         await db.Devices.AnyAsync(d => d.Id == deviceId && d.UserId == CurrentUserId);
+
+    // ── Installed Apps ─────────────────────────────────────────────────────────
+
+    [HttpGet("devices/{deviceId:int}/apps")]
+    public async Task<IActionResult> GetInstalledApps(int deviceId)
+    {
+        if (!await OwnsDeviceAsync(deviceId)) return Forbid();
+
+        var data = await db.InstalledApps
+            .Where(a => a.DeviceId == deviceId)
+            .OrderBy(a => a.AppName)
+            .Select(a => new InstalledAppDto(a.PackageName, a.AppName, a.Version, a.InstalledAt, a.LastSeenAt, a.IconBase64))
+            .ToListAsync();
+
+        return Ok(data);
+    }
 }
