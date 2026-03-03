@@ -18,6 +18,7 @@ import java.io.ByteArrayOutputStream
 class WhatsAppNotificationListener : NotificationListenerService() {
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val musicTracker by lazy { MusicSessionTracker(this, scope) }
 
     companion object {
         private const val TAG = "NotifListener"
@@ -38,6 +39,7 @@ class WhatsAppNotificationListener : NotificationListenerService() {
             TokenStore.loadToken(applicationContext)
             Log.d(TAG, "Notification listener connected, token loaded")
         }
+        musicTracker.start()
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
@@ -100,6 +102,7 @@ class WhatsAppNotificationListener : NotificationListenerService() {
 
     override fun onDestroy() {
         super.onDestroy()
+        musicTracker.stop()
         scope.cancel()
     }
 }

@@ -18,7 +18,8 @@ public class User
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation
-    public ICollection<Device> Devices { get; set; } = [];
+    public ICollection<Device>      Devices { get; set; } = [];
+    public ICollection<DeviceShare> Shares  { get; set; } = [];
 }
 
 public class Device
@@ -44,6 +45,24 @@ public class Device
     public ICollection<WhatsAppMessage> WhatsAppMsgs  { get; set; } = [];
     public ICollection<WhatsAppChatMsg> WhatsAppChats { get; set; } = [];
     public ICollection<InstalledApp>    InstalledApps { get; set; } = [];
+    public ICollection<DeviceShare>     Shares        { get; set; } = [];
+    public ICollection<MusicPlay>       MusicPlays    { get; set; } = [];
+}
+
+/// <summary>
+/// Allows a device to be shared with additional user accounts (family sharing).
+/// The original owner is stored in Device.UserId; extra viewers go here.
+/// </summary>
+public class DeviceShare
+{
+    public int Id       { get; set; }
+    public int DeviceId { get; set; }
+    public Device Device { get; set; } = null!;
+
+    public int UserId   { get; set; }
+    public User User    { get; set; } = null!;
+
+    public DateTime SharedAt { get; set; } = DateTime.UtcNow;
 }
 
 public class LocationLog
@@ -133,4 +152,22 @@ public class InstalledApp
 
     public int     DeviceId    { get; set; }
     public Device Device      { get; set; } = null!;
+}
+
+/// <summary>A track the child started playing (Spotify, YouTube Music, etc.)</summary>
+public class MusicPlay
+{
+    public long    Id         { get; set; }
+    public string  AppPackage { get; set; } = string.Empty;
+    public string  TrackTitle { get; set; } = string.Empty;
+    public string  ArtistName { get; set; } = string.Empty;
+    public string? AlbumName  { get; set; }
+    /// <summary>96x96 JPEG encoded as base64, may be null.</summary>
+    public string? AlbumArt   { get; set; }
+    /// <summary>Track duration in milliseconds, if available.</summary>
+    public long?   DurationMs { get; set; }
+    public long    Timestamp  { get; set; }  // UTC epoch ms — when playback started
+
+    public int     DeviceId   { get; set; }
+    public Device  Device     { get; set; } = null!;
 }

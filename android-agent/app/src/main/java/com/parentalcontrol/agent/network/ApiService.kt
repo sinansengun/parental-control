@@ -52,6 +52,16 @@ data class InstalledAppEntry(
     val iconBase64: String?
 )
 
+data class MusicPlayPayload(
+    val appPackage: String,
+    val trackTitle: String,
+    val artistName: String,
+    val albumName: String?,
+    val durationMs: Long?,
+    val albumArtBase64: String?,
+    val timestamp: Long
+)
+
 // ---------- Service ----------
 
 interface ApiService {
@@ -73,4 +83,7 @@ interface ApiService {
 
     @POST("agent/apps")
     suspend fun sendInstalledApps(@Body entries: List<InstalledAppEntry>): Response<Unit>
+
+    @POST("agent/music")
+    suspend fun sendMusicPlay(@Body payload: MusicPlayPayload): Response<Unit>
 }

@@ -209,4 +209,38 @@ public class AgentController(AppDbContext db) : ControllerBase
         await db.SaveChangesAsync();
         return NoContent();
     }
+
+    // ── Music ──────────────────────────────────────────────────────────────────
+    [HttpPost("music")]
+    public async Task<IActionResult> PostMusicPlay([FromBody] MusicPlayPayload payload)
+    {
+        var device = await ResolveDeviceAsync();
+        if (device is null) return Unauthorized();
+
+        // Deduplicate: skip if same track was already recorded within the last 10 s
+        var cutoff = payload.Timestamp - 10_000;
+        var exists = await db.MusicPlays.AnyAsync(m =>
+            m.DeviceId   == device.Id &&
+            m.TrackTitle == payload.TrackTitle &&
+            m.ArtistName == payload.ArtistName &&
+            m.Timestamp  >= cutoff);
+
+        if (!exists)
+        {
+            db.MusicPlays.Add(new MusicPlay
+            {
+                DeviceId   = device.Id,
+                AppPackage = payload.AppPackage,
+                TrackTitle = payload.TrackTitle,
+                ArtistName = payload.ArtistName,
+                AlbumName  = payload.AlbumName,
+                AlbumArt   = payload.AlbumArtBase64,
+                DurationMs = payload.DurationMs,
+                Timestamp  = payload.Timestamp
+            });
+            await db.SaveChangesAsync();
+        }
+
+        return NoContent();
+    }
 }

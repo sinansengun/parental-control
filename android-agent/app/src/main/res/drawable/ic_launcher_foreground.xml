@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Family Guard launcher icon — foreground layer
+  Viewport 108×108dp · adaptive safe zone = inner 72dp (inset 18 each side)
+  Design: clean white shield + padlock, matching the dashboard brand
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- ── Outer shield (white) ──────────────────────────────────────
+         Wide rounded shield: flat top, curved sides, pointed bottom    -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,9 L89,21 L89,51 Q89,76 54,96 Q19,76 19,51 L19,21 Z" />
+
+    <!-- ── Inner shield (indigo-600 #4F46E5) ────────────────────────
+         Slightly inset version — creates a border effect               -->
+    <path
+        android:fillColor="#4F46E5"
+        android:pathData="M54,17 L82,27 L82,51 Q82,71 54,88 Q26,71 26,51 L26,27 Z" />
+
+    <!-- ── Top sheen on white outer shield ───────────────────────── -->
+    <path
+        android:fillColor="#1AFFFFFF"
+        android:pathData="M54,13 L85,24 L85,35 Q76,32 54,27 Q32,32 23,35 L23,24 Z" />
+
+    <!-- ── Padlock shackle (white U-arc) ────────────────────────────
+         Outer r=13: arc M41,52 A13,13 0 0 1 67,52
+         Inner r=7:  arc back M60,52 A7,7 0 0 0 48,52
+         Stroke width achieved by subtracting inner from outer         -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="
+          M41,52
+          A13,13 0 0 1 67,52
+          L60,52
+          A7,7 0 0 0 48,52
+          Z" />
+
+    <!-- ── Padlock body (white rounded rect) ─────────────────────────
+         x=40 y=52 width=28 height=22 rx=5                             -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M40,52 L68,52 L68,70 Q68,74 64,74 L44,74 Q40,74 40,70 Z" />
+
+    <!-- ── Keyhole circle (indigo, cx=54 cy=60 r=5.5) ───────────── -->
+    <path
+        android:fillColor="#4F46E5"
+        android:pathData="
+          M48.5,60
+          A5.5,5.5 0 1 0 59.5,60
+          A5.5,5.5 0 1 0 48.5,60
+          Z" />
+
+    <!-- ── Keyhole slot (indigo rect below circle) ───────────────── -->
+    <path
+        android:fillColor="#4F46E5"
+        android:pathData="M52,63 L56,63 L57,70 L51,70 Z" />
+
+</vector>

