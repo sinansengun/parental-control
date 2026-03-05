@@ -17,6 +17,12 @@ object TokenStore {
     var cachedToken: String = ""
         private set
 
+    /**
+     * True once the user has successfully entered the PIN this session.
+     * Reset to false when the process is killed (app force-closed or rebooted).
+     */
+    var pinVerified: Boolean = false
+
     suspend fun saveToken(context: Context, token: String) {
         context.dataStore.edit { prefs ->
             prefs[KEY_DEVICE_TOKEN] = token

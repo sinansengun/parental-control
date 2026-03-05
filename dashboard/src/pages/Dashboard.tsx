@@ -1,8 +1,110 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getDevices, registerDevice, Device } from '../api/api'
+import { getDevices, registerDevice, updateDevice, Device } from '../api/api'
 
-// ── Add-device modal ─────────────────────────────────────────────────────────
+// ── Edit-device modal ─────────────────────────────────────────────────────
+interface EditDeviceModalProps {
+  device: Device
+  onClose: () => void
+  onSaved: (updated: Device) => void
+}
+
+function EditDeviceModal({ device, onClose, onSaved }: EditDeviceModalProps) {
+  const [name, setName]         = useState(device.name)
+  const [pin, setPin]           = useState('')
+  const [clearPin, setClearPin] = useState(false)
+  const [error, setError]       = useState('')
+  const [loading, setLoading]   = useState(false)
+  const nameRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => { nameRef.current?.focus() }, [])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!name.trim()) { setError('Device name is required.'); return }
+    if (pin && (!/^\d{4,8}$/.test(pin))) { setError('PIN must be 4-8 digits.'); return }
+    setError('')
+    setLoading(true)
+    try {
+      const res = await updateDevice(device.id, name.trim(), pin || undefined, clearPin)
+      onSaved(res.data)
+      onClose()
+    } catch (err: any) {
+      setError(err?.response?.data?.message ?? 'Something went wrong.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6"
+        onClick={e => e.stopPropagation()}
+      >
+        <h2 className="text-lg font-bold text-gray-900 mb-5">⚙️ Edit Device</h2>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Device name</label>
+            <input
+              ref={nameRef}
+              value={name}
+              onChange={e => setName(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              App-open PIN
+              {device.hasPIN && <span className="ml-2 text-xs px-1.5 py-0.5 bg-green-100 text-green-700 rounded-full">Set</span>}
+            </label>
+            <input
+              value={pin}
+              onChange={e => { setPin(e.target.value.replace(/\D/g, '').slice(0, 8)); setClearPin(false) }}
+              placeholder={device.hasPIN ? 'Enter new PIN to change…' : '4–8 digits (optional)'}
+              inputMode="numeric"
+              maxLength={8}
+              disabled={clearPin}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-40"
+            />
+            <p className="text-xs text-gray-400 mt-1">Child must enter this PIN every time the app opens.</p>
+          </div>
+
+          {device.hasPIN && (
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={clearPin}
+                onChange={e => { setClearPin(e.target.checked); if (e.target.checked) setPin('') }}
+                className="rounded border-gray-300 text-red-500 focus:ring-red-400"
+              />
+              <span className="text-sm text-red-600">Remove PIN (no lock on app open)</span>
+            </label>
+          )}
+
+          {error && (
+            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
+          )}
+
+          <div className="flex gap-3 pt-1">
+            <button type="button" onClick={onClose}
+              className="flex-1 py-2 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+              Cancel
+            </button>
+            <button type="submit" disabled={loading}
+              className="flex-1 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-sm font-semibold transition-colors">
+              {loading ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// ── Add-device modal ──────────────────────────────────────────────────────────────
 interface AddDeviceModalProps {
   onClose: () => void
   onAdded: (device: Device) => void
@@ -134,11 +236,12 @@ function AddDeviceModal({ onClose, onAdded }: AddDeviceModalProps) {
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const nav = useNavigate()
-  const [devices, setDevices]     = useState<Device[]>([])
-  const [loading, setLoading]     = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
-  const [copied, setCopied]       = useState<number | null>(null)
-  const [showModal, setShowModal] = useState(false)
+  const [devices, setDevices]         = useState<Device[]>([])
+  const [loading, setLoading]         = useState(true)
+  const [refreshing, setRefreshing]   = useState(false)
+  const [copied, setCopied]           = useState<number | null>(null)
+  const [showModal, setShowModal]     = useState(false)
+  const [editingDevice, setEditingDevice] = useState<Device | null>(null)
 
   useEffect(() => { loadDevices() }, [])
 
@@ -169,6 +272,10 @@ export default function Dashboard() {
     }
   }
 
+  const handleDeviceSaved = (updated: Device) => {
+    setDevices(prev => prev.map(d => d.id === updated.id ? updated : d))
+  }
+
   const logout = () => { localStorage.removeItem('token'); nav('/login') }
 
   return (
@@ -177,6 +284,13 @@ export default function Dashboard() {
         <AddDeviceModal
           onClose={() => setShowModal(false)}
           onAdded={handleDeviceAdded}
+        />
+      )}
+      {editingDevice && (
+        <EditDeviceModal
+          device={editingDevice}
+          onClose={() => setEditingDevice(null)}
+          onSaved={handleDeviceSaved}
         />
       )}
 
@@ -223,11 +337,22 @@ export default function Dashboard() {
             >
               <div className="flex items-center justify-between mb-3">
                 <p className="font-semibold text-gray-800">📱 {d.name}</p>
-                {d.isShared && (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 font-medium">
-                    Shared
-                  </span>
-                )}
+                <div className="flex items-center gap-1.5">
+                  {d.hasPIN && (
+                    <span className="text-xs px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 font-medium" title="PIN protected">🔒</span>
+                  )}
+                  {d.isShared && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 font-medium">Shared</span>
+                  )}
+                  {!d.isShared && (
+                    <button
+                      onClick={e => { e.stopPropagation(); setEditingDevice(d) }}
+                      className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 hover:bg-indigo-100 hover:text-indigo-700 font-medium transition-colors"
+                    >
+                      Edit
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-400 truncate flex-1 font-mono">{d.deviceToken}</span>

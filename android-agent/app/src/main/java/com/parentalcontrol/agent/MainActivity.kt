@@ -48,6 +48,12 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // PIN already verified this session → go straight to main screen
+        if (TokenStore.pinVerified) {
+            initMainScreen()
+            return
+        }
+
         // Check token first — if missing, go to setup
         CoroutineScope(Dispatchers.IO).launch {
             val hasToken = TokenStore.hasToken(applicationContext)
@@ -59,7 +65,30 @@ class MainActivity : AppCompatActivity() {
                     )
                     return@withContext
                 }
-                initMainScreen()
+                checkPinRequired()
+            }
+        }
+    }
+
+    /** Queries the backend to see if this device has a PIN, then routes accordingly. */
+    private fun checkPinRequired() {
+        CoroutineScope(Dispatchers.IO).launch {
+            val hasPIN = try {
+                val resp = com.parentalcontrol.agent.network.ApiClient.service.getDeviceStatus()
+                resp.isSuccessful && resp.body()?.hasPIN == true
+            } catch (e: Exception) {
+                false // Network error → skip PIN to avoid locking user out
+            }
+            withContext(Dispatchers.Main) {
+                if (hasPIN) {
+                    startActivity(
+                        Intent(this@MainActivity, PinActivity::class.java)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                    )
+                } else {
+                    TokenStore.pinVerified = true
+                    initMainScreen()
+                }
             }
         }
     }

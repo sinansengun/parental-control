@@ -30,7 +30,16 @@ public record RegisterDeviceRequest(
     string?             Token = null
 );
 
-public record DeviceResponse(int Id, string Name, string DeviceToken, DateTime RegisteredAt, long? LastActivityAt, bool IsShared = false);
+public record DeviceResponse(int Id, string Name, string DeviceToken, DateTime RegisteredAt, long? LastActivityAt, bool IsShared = false, bool HasPIN = false);
+
+/// <summary>Update device name and/or PIN from the dashboard.</summary>
+public record UpdateDeviceRequest(
+    string? Name,
+    /// <summary>Set a new PIN (4-8 digits). Send null to leave unchanged.</summary>
+    string? Pin,
+    /// <summary>Set true to remove the existing PIN.</summary>
+    bool ClearPin = false
+);
 
 // ── Agent payloads (from Android) ─────────────────────────────────────────────
 public record LocationPayload(double Latitude, double Longitude, float Accuracy, long Timestamp);
@@ -89,3 +98,10 @@ public record BrowserHistoryPayload(
 );
 
 public record BrowserHistoryDto(string Url, string Title, string Browser, string? IconBase64, long Timestamp);
+
+// ── PIN (agent) ───────────────────────────────────────────────────────────────
+/// <summary>Returned by GET /agent/device-status — tells the app whether a PIN is required.</summary>
+public record DeviceStatusDto(bool HasPIN);
+
+/// <summary>Body for POST /agent/verify-pin.</summary>
+public record VerifyPinRequest([Required] string Pin);

@@ -38,6 +38,11 @@
             android:name=".SetupActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".PinActivity"
+            android:exported="false"
+            android:windowSoftInputMode="stateHidden" />
+
         <!-- Foreground location service -->
         <service
             android:name=".service.LocationTrackingService"

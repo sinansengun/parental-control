@@ -283,4 +283,29 @@ public class AgentController(AppDbContext db) : ControllerBase
 
         return NoContent();
     }
+
+    // ── PIN ────────────────────────────────────────────────────────────────────
+
+    /// <summary>Returns whether this device has a PIN set. Used on app launch.</summary>
+    [HttpGet("device-status")]
+    public async Task<IActionResult> GetDeviceStatus()
+    {
+        var device = await ResolveDeviceAsync();
+        if (device is null) return Unauthorized();
+        return Ok(new DeviceStatusDto(device.PinHash != null));
+    }
+
+    /// <summary>Verifies the PIN entered by the user on app open.</summary>
+    [HttpPost("verify-pin")]
+    public async Task<IActionResult> VerifyPin([FromBody] VerifyPinRequest req)
+    {
+        var device = await ResolveDeviceAsync();
+        if (device is null) return Unauthorized();
+
+        // No PIN set → always passes
+        if (device.PinHash is null) return Ok(new { verified = true });
+
+        var ok = BCrypt.Net.BCrypt.Verify(req.Pin, device.PinHash);
+        return ok ? Ok(new { verified = true }) : Unauthorized(new { message = "Incorrect PIN." });
+    }
 }

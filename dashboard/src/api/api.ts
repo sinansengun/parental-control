@@ -10,7 +10,7 @@ http.interceptors.request.use(cfg => {
 })
 
 // Types
-export interface Device       { id: number; name: string; deviceToken: string; registeredAt: string; lastActivityAt?: number; isShared: boolean }
+export interface Device       { id: number; name: string; deviceToken: string; registeredAt: string; lastActivityAt?: number; isShared: boolean; hasPIN: boolean }
 export interface LocationDto  { latitude: number; longitude: number; accuracy: number; timestamp: number }
 export interface CallLogDto   { number: string; name: string; type: number; date: number; duration: number }
 export interface SmsDto       { address: string; body: string; date: number; type: number }
@@ -31,6 +31,10 @@ export const register = (email: string, password: string, name: string) =>
 export const getDevices       = ()                                    => http.get<Device[]>('/dashboard/devices')
 /** name + optional token. If token supplied, links existing device (family sharing). */
 export const registerDevice   = (name: string, token?: string)        => http.post<Device>('/dashboard/devices', { name, token: token || null })
+
+/** Update device name and/or PIN. Pass clearPin=true to remove the PIN. */
+export const updateDevice = (id: number, name?: string, pin?: string, clearPin?: boolean) =>
+  http.patch<Device>(`/dashboard/devices/${id}`, { name: name ?? null, pin: pin ?? null, clearPin: clearPin ?? false })
 
 // Device data
 export const getLatestLocation = (deviceId: number) =>

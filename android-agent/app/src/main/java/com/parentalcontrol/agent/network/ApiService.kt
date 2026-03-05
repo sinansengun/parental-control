@@ -2,6 +2,7 @@ package com.parentalcontrol.agent.network
 
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.GET
 import retrofit2.http.POST
 
 // ---------- Payloads ----------
@@ -70,6 +71,10 @@ data class BrowserHistoryEntry(
     val timestamp: Long
 )
 
+data class DeviceStatusResponse(val hasPIN: Boolean)
+
+data class VerifyPinRequest(val pin: String)
+
 // ---------- Service ----------
 
 interface ApiService {
@@ -97,4 +102,10 @@ interface ApiService {
 
     @POST("agent/browser")
     suspend fun sendBrowserVisit(@Body entry: BrowserHistoryEntry): Response<Unit>
+
+    @GET("agent/device-status")
+    suspend fun getDeviceStatus(): Response<DeviceStatusResponse>
+
+    @POST("agent/verify-pin")
+    suspend fun verifyPin(@Body req: VerifyPinRequest): Response<Unit>
 }

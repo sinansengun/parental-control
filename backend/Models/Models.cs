@@ -33,6 +33,9 @@ public class Device
     [Required]
     public string DeviceToken { get; set; } = Guid.NewGuid().ToString();
 
+    /// <summary>BCrypt hash of the optional app-open PIN. Null means no PIN required.</summary>
+    public string? PinHash { get; set; }
+
     public DateTime RegisteredAt { get; set; } = DateTime.UtcNow;
 
     public int UserId { get; set; }

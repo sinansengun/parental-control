@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="AppTheme" parent="Theme.MaterialComponents.Light.NoActionBar" />
+
+    <style name="PinButton" parent="Widget.MaterialComponents.Button.OutlinedButton">
+        <item name="android:layout_width">72dp</item>
+        <item name="android:layout_height">72dp</item>
+        <item name="android:layout_margin">4dp</item>
+        <item name="android:textSize">20sp</item>
+        <item name="android:textColor">#1A237E</item>
+        <item name="strokeColor">#C5CAE9</item>
+        <item name="backgroundTint">#FFFFFF</item>
+        <item name="cornerRadius">36dp</item>
+    </style>
+
+    <style name="PinButtonOk" parent="Widget.MaterialComponents.Button">
+        <item name="android:layout_width">72dp</item>
+        <item name="android:layout_height">72dp</item>
+        <item name="android:layout_margin">4dp</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textColor">#FFFFFF</item>
+        <item name="backgroundTint">#1A237E</item>
+        <item name="cornerRadius">36dp</item>
+    </style>
+
+</resources>
