@@ -22,7 +22,7 @@ function EditDeviceModal({ device, onClose, onSaved }: EditDeviceModalProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim()) { setError('Device name is required.'); return }
-    if (pin && (!/^\d{4,8}$/.test(pin))) { setError('PIN must be 4-8 digits.'); return }
+    if (pin && (!/^\d{4}$/.test(pin))) { setError('PIN must be exactly 4 digits.'); return }
     setError('')
     setLoading(true)
     try {
@@ -62,14 +62,14 @@ function EditDeviceModal({ device, onClose, onSaved }: EditDeviceModalProps) {
             </label>
             <input
               value={pin}
-              onChange={e => { setPin(e.target.value.replace(/\D/g, '').slice(0, 8)); setClearPin(false) }}
-              placeholder={device.hasPIN ? 'Enter new PIN to change…' : '4–8 digits (optional)'}
+              onChange={e => { setPin(e.target.value.replace(/\D/g, '').slice(0, 4)); setClearPin(false) }}
+              placeholder={device.hasPIN ? 'Enter new 4-digit PIN…' : '4 digits (optional)'}
               inputMode="numeric"
-              maxLength={8}
+              maxLength={4}
               disabled={clearPin}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-40"
             />
-            <p className="text-xs text-gray-400 mt-1">Child must enter this PIN every time the app opens.</p>
+            <p className="text-xs text-gray-400 mt-1">Child must enter this 4-digit PIN every time the app opens.</p>
           </div>
 
           {device.hasPIN && (
@@ -358,24 +358,31 @@ export default function Dashboard() {
                 <span className="text-xs text-gray-400 truncate flex-1 font-mono">{d.deviceToken}</span>
                 <button
                   onClick={(e) => copyToken(e, d.id, d.deviceToken)}
-                  className={`flex-shrink-0 px-2 py-1 text-xs rounded-md font-medium transition-colors ${
+                  title={copied === d.id ? 'Copied!' : 'Copy token'}
+                  className={`flex-shrink-0 px-2 py-0.5 text-xs rounded-full font-medium transition-colors ${
                     copied === d.id
-                      ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
-                      : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : 'bg-gray-100 text-gray-600 hover:bg-indigo-100 hover:text-indigo-700'
                   }`}
                 >
-                  {copied === d.id ? '✓ Copied' : 'Copy'}
+                  {copied === d.id ? '✓' : '⧉'}
                 </button>
               </div>
               <p className="text-xs text-gray-400 mt-3">
-                Registered {new Date(d.registeredAt).toLocaleDateString()}
+                <span className="font-semibold text-gray-600">Registered</span> {new Date(d.registeredAt).toLocaleDateString()}
               </p>
               {d.lastActivityAt
                 ? <p className="text-xs text-gray-400 mt-1">
-                    Last activity: {new Date(d.lastActivityAt).toLocaleString()}
+                    <span className="font-semibold text-gray-600">Last activity</span> {new Date(d.lastActivityAt).toLocaleString()}
                   </p>
-                : <p className="text-xs text-gray-400 mt-1">No activity yet</p>
+                : <p className="text-xs text-gray-400 mt-1"><span className="font-semibold text-gray-600">Last activity</span> —</p>
               }
+              {d.hasPIN && (
+                <p className="text-xs text-gray-400 mt-1">
+                  <span className="font-semibold text-gray-600">Last PIN used</span>{' '}
+                  {d.lastPinUsedAt ? new Date(d.lastPinUsedAt).toLocaleString() : '—'}
+                </p>
+              )}
             </div>
           ))}
         </div>

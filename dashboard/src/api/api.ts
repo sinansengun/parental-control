@@ -10,7 +10,7 @@ http.interceptors.request.use(cfg => {
 })
 
 // Types
-export interface Device       { id: number; name: string; deviceToken: string; registeredAt: string; lastActivityAt?: number; isShared: boolean; hasPIN: boolean }
+export interface Device       { id: number; name: string; deviceToken: string; registeredAt: string; lastActivityAt?: number; isShared: boolean; hasPIN: boolean; lastPinUsedAt?: number }
 export interface LocationDto  { latitude: number; longitude: number; accuracy: number; timestamp: number }
 export interface CallLogDto   { number: string; name: string; type: number; date: number; duration: number }
 export interface SmsDto       { address: string; body: string; date: number; type: number }

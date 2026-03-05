@@ -31,7 +31,8 @@ public class DashboardController(AppDbContext db) : ControllerBase
                 LastWa     = d.WhatsAppMsgs .Max(w => (long?)w.Timestamp),
                 LastWaChat = d.WhatsAppChats.Max(w => (long?)w.Timestamp),
                 IsShared   = false,
-                HasPIN     = d.PinHash != null });
+                HasPIN     = d.PinHash != null,
+                d.LastPinUsedAt });
 
         // Devices shared with this user
         var sharedQuery = db.DeviceShares
@@ -43,7 +44,8 @@ public class DashboardController(AppDbContext db) : ControllerBase
                 LastWa     = s.Device.WhatsAppMsgs .Max(w => (long?)w.Timestamp),
                 LastWaChat = s.Device.WhatsAppChats.Max(w => (long?)w.Timestamp),
                 IsShared   = true,
-                HasPIN     = s.Device.PinHash != null });
+                HasPIN     = s.Device.PinHash != null,
+                s.Device.LastPinUsedAt });
 
         var raw = await ownedQuery.Union(sharedQuery).ToListAsync();
 
@@ -52,7 +54,7 @@ public class DashboardController(AppDbContext db) : ControllerBase
             var candidates = new[] { d.LastLoc, d.LastCall, d.LastSms, d.LastWa, d.LastWaChat }
                 .Where(x => x.HasValue).Select(x => x!.Value).ToList();
             long? lastActivity = candidates.Count > 0 ? candidates.Max() : null;
-            return new DeviceResponse(d.Id, d.Name, d.DeviceToken, d.RegisteredAt, lastActivity, d.IsShared, d.HasPIN);
+            return new DeviceResponse(d.Id, d.Name, d.DeviceToken, d.RegisteredAt, lastActivity, d.IsShared, d.HasPIN, d.LastPinUsedAt);
         }).ToList();
 
         return Ok(devices);
@@ -75,7 +77,7 @@ public class DashboardController(AppDbContext db) : ControllerBase
 
             // Owner just gets the device back without a duplicate share
             if (existing.UserId == CurrentUserId)
-                return Ok(new DeviceResponse(existing.Id, existing.Name, existing.DeviceToken, existing.RegisteredAt, null, false, existing.PinHash != null));
+                return Ok(new DeviceResponse(existing.Id, existing.Name, existing.DeviceToken, existing.RegisteredAt, null, false, existing.PinHash != null, existing.LastPinUsedAt));
 
             // Check not already shared
             var alreadyShared = await db.DeviceShares
@@ -86,7 +88,7 @@ public class DashboardController(AppDbContext db) : ControllerBase
                 await db.SaveChangesAsync();
             }
 
-            return Ok(new DeviceResponse(existing.Id, existing.Name, existing.DeviceToken, existing.RegisteredAt, null, true, existing.PinHash != null));
+            return Ok(new DeviceResponse(existing.Id, existing.Name, existing.DeviceToken, existing.RegisteredAt, null, true, existing.PinHash != null, existing.LastPinUsedAt));
         }
         else
         {
@@ -94,7 +96,7 @@ public class DashboardController(AppDbContext db) : ControllerBase
             var device = new Device { Name = req.Name, UserId = CurrentUserId };
             db.Devices.Add(device);
             await db.SaveChangesAsync();
-            return Ok(new DeviceResponse(device.Id, device.Name, device.DeviceToken, device.RegisteredAt, null, false, false));
+            return Ok(new DeviceResponse(device.Id, device.Name, device.DeviceToken, device.RegisteredAt, null, false, false, null));
         }
     }
 
@@ -114,13 +116,13 @@ public class DashboardController(AppDbContext db) : ControllerBase
         }
         else if (!string.IsNullOrWhiteSpace(req.Pin))
         {
-            if (req.Pin.Length < 4 || req.Pin.Length > 8 || !req.Pin.All(char.IsDigit))
-                return BadRequest(new { message = "PIN must be 4-8 digits." });
+            if (req.Pin.Length != 4 || !req.Pin.All(char.IsDigit))
+                return BadRequest(new { message = "PIN must be exactly 4 digits." });
             device.PinHash = BCrypt.Net.BCrypt.HashPassword(req.Pin);
         }
 
         await db.SaveChangesAsync();
-        return Ok(new DeviceResponse(device.Id, device.Name, device.DeviceToken, device.RegisteredAt, null, false, device.PinHash != null));
+        return Ok(new DeviceResponse(device.Id, device.Name, device.DeviceToken, device.RegisteredAt, null, false, device.PinHash != null, device.LastPinUsedAt));
     }
 
     // ── Location ───────────────────────────────────────────────────────────────

@@ -30,12 +30,12 @@ public record RegisterDeviceRequest(
     string?             Token = null
 );
 
-public record DeviceResponse(int Id, string Name, string DeviceToken, DateTime RegisteredAt, long? LastActivityAt, bool IsShared = false, bool HasPIN = false);
+public record DeviceResponse(int Id, string Name, string DeviceToken, DateTime RegisteredAt, long? LastActivityAt, bool IsShared = false, bool HasPIN = false, long? LastPinUsedAt = null);
 
 /// <summary>Update device name and/or PIN from the dashboard.</summary>
 public record UpdateDeviceRequest(
     string? Name,
-    /// <summary>Set a new PIN (4-8 digits). Send null to leave unchanged.</summary>
+    /// <summary>Set a new PIN (exactly 4 digits). Send null to leave unchanged.</summary>
     string? Pin,
     /// <summary>Set true to remove the existing PIN.</summary>
     bool ClearPin = false

@@ -55,10 +55,12 @@ class PinActivity : AppCompatActivity() {
     }
 
     private fun appendDigit(d: String) {
-        if (entered.length >= 8) return
+        if (entered.length >= 4) return
         entered.append(d)
         tvError.text = ""
         updateDots()
+        // Auto-submit when 4 digits have been entered
+        if (entered.length == 4) submitPin()
     }
 
     private fun deleteDigit() {
@@ -68,16 +70,15 @@ class PinActivity : AppCompatActivity() {
     }
 
     private fun updateDots() {
-        val filled   = entered.length
-        val maxDots  = 8
-        val display  = "●".repeat(filled) + "○".repeat((maxDots - filled).coerceAtLeast(0))
+        val filled  = entered.length
+        val display = "●".repeat(filled) + "○".repeat((4 - filled).coerceAtLeast(0))
         tvDots.text = display
     }
 
     private fun submitPin() {
         val pin = entered.toString()
         if (pin.length < 4) {
-            tvError.text = "PIN must be at least 4 digits."
+            tvError.text = "Enter 4 digits."
             return
         }
 

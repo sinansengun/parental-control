@@ -36,6 +36,9 @@ public class Device
     /// <summary>BCrypt hash of the optional app-open PIN. Null means no PIN required.</summary>
     public string? PinHash { get; set; }
 
+    /// <summary>UTC epoch ms of the last successful PIN entry on the device.</summary>
+    public long? LastPinUsedAt { get; set; }
+
     public DateTime RegisteredAt { get; set; } = DateTime.UtcNow;
 
     public int UserId { get; set; }

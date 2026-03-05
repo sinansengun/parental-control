@@ -306,6 +306,12 @@ public class AgentController(AppDbContext db) : ControllerBase
         if (device.PinHash is null) return Ok(new { verified = true });
 
         var ok = BCrypt.Net.BCrypt.Verify(req.Pin, device.PinHash);
-        return ok ? Ok(new { verified = true }) : Unauthorized(new { message = "Incorrect PIN." });
+        if (ok)
+        {
+            device.LastPinUsedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            await db.SaveChangesAsync();
+            return Ok(new { verified = true });
+        }
+        return Unauthorized(new { message = "Incorrect PIN." });
     }
 }

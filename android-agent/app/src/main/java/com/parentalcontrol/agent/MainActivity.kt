@@ -39,6 +39,9 @@ class MainActivity : AppCompatActivity() {
     private var tvLog: TextView? = null
     private var scrollLog: ScrollView? = null
 
+    /** True once initMainScreen() has been called at least once in this process. */
+    private var screenInitialized = false
+
     private val logReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             refreshLog()
@@ -94,6 +97,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initMainScreen() {
+        screenInitialized = true
         setContentView(R.layout.activity_main)
 
         val tvStatus         = findViewById<TextView>(R.id.tvStatus)
@@ -152,6 +156,14 @@ class MainActivity : AppCompatActivity() {
         scrollLog?.post { scrollLog?.fullScroll(ScrollView.FOCUS_DOWN) }
     }
 
+    override fun onStart() {
+        super.onStart()
+        // App came back from background — re-verify PIN if screen was already shown
+        if (screenInitialized && !TokenStore.pinVerified) {
+            checkPinRequired()
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         LocalBroadcastManager.getInstance(this)
@@ -167,6 +179,12 @@ class MainActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         LocalBroadcastManager.getInstance(this).unregisterReceiver(logReceiver)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Reset so PIN is required next time the app comes to foreground
+        TokenStore.pinVerified = false
     }
 
     private fun isNotificationListenerEnabled(): Boolean {
