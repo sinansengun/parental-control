@@ -113,6 +113,7 @@ interface AddDeviceModalProps {
 function AddDeviceModal({ onClose, onAdded }: AddDeviceModalProps) {
   const [name, setName]       = useState('')
   const [token, setToken]     = useState('')
+  const [pin, setPin]         = useState('')
   const [mode, setMode]       = useState<'new' | 'link'>('new')
   const [error, setError]     = useState('')
   const [loading, setLoading] = useState(false)
@@ -124,11 +125,18 @@ function AddDeviceModal({ onClose, onAdded }: AddDeviceModalProps) {
     e.preventDefault()
     if (!name.trim()) { setError('Device name is required.'); return }
     if (mode === 'link' && !token.trim()) { setError('Paste the device token to link.'); return }
+    if (mode === 'new' && pin && !/^\d{4}$/.test(pin)) { setError('PIN must be exactly 4 digits.'); return }
     setError('')
     setLoading(true)
     try {
       const res = await registerDevice(name.trim(), mode === 'link' ? token.trim() : undefined)
-      onAdded(res.data)
+      // Set PIN if provided (new device only)
+      if (mode === 'new' && pin) {
+        try { await updateDevice(res.data.id, undefined, pin) } catch {}
+        onAdded({ ...res.data, hasPIN: true })
+      } else {
+        onAdded(res.data)
+      }
       onClose()
     } catch (err: any) {
       const msg = err?.response?.data?.message ?? 'Something went wrong.'
@@ -150,7 +158,7 @@ function AddDeviceModal({ onClose, onAdded }: AddDeviceModalProps) {
         <div className="flex rounded-lg border border-gray-200 overflow-hidden mb-5">
           <button
             type="button"
-            onClick={() => setMode('new')}
+            onClick={() => { setMode('new') }}
             className={`flex-1 py-2 text-sm font-medium transition-colors ${
               mode === 'new' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'
             }`}
@@ -159,7 +167,7 @@ function AddDeviceModal({ onClose, onAdded }: AddDeviceModalProps) {
           </button>
           <button
             type="button"
-            onClick={() => setMode('link')}
+            onClick={() => { setMode('link'); setPin('') }}
             className={`flex-1 py-2 text-sm font-medium transition-colors ${
               mode === 'link' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'
             }`}
@@ -183,9 +191,25 @@ function AddDeviceModal({ onClose, onAdded }: AddDeviceModalProps) {
           </div>
 
           {mode === 'new' && (
-            <p className="text-xs text-gray-500 bg-gray-50 rounded-lg p-3">
-              A unique device token will be generated automatically. Copy it to the Android agent after creation.
-            </p>
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  App-open PIN <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <input
+                  value={pin}
+                  onChange={e => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                  placeholder="4-digit PIN…"
+                  inputMode="numeric"
+                  maxLength={4}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                />
+                <p className="text-xs text-gray-400 mt-1">Child must enter this PIN every time the app opens.</p>
+              </div>
+              <p className="text-xs text-gray-500 bg-gray-50 rounded-lg p-3">
+                A unique device token will be generated automatically. Copy it to the Android agent after creation.
+              </p>
+            </>
           )}
 
           {mode === 'link' && (
