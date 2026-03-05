@@ -47,6 +47,7 @@ public class Device
     public ICollection<InstalledApp>    InstalledApps { get; set; } = [];
     public ICollection<DeviceShare>     Shares        { get; set; } = [];
     public ICollection<MusicPlay>       MusicPlays    { get; set; } = [];
+    public ICollection<BrowserVisit>    BrowserHistory { get; set; } = [];
 }
 
 /// <summary>
@@ -152,6 +153,21 @@ public class InstalledApp
 
     public int     DeviceId    { get; set; }
     public Device Device      { get; set; } = null!;
+}
+
+/// <summary>A URL the child visited in a browser (captured via Accessibility Service)</summary>
+public class BrowserVisit
+{
+    public long   Id        { get; set; }
+    public string Url       { get; set; } = string.Empty;
+    public string Title     { get; set; } = string.Empty;
+    public string Browser   { get; set; } = string.Empty;
+    /// <summary>Browser app icon as Base64-encoded PNG (48x48), may be null.</summary>
+    public string? IconBase64 { get; set; }
+    public long   Timestamp { get; set; }
+
+    public int    DeviceId  { get; set; }
+    public Device Device    { get; set; } = null!;
 }
 
 /// <summary>A track the child started playing (Spotify, YouTube Music, etc.)</summary>

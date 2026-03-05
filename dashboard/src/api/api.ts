@@ -18,6 +18,7 @@ export interface WhatsAppDto      { appPackage: string; appName: string; appIcon
 export interface WhatsAppChatDto  { chat: string; sender: string; message: string; timestamp: number }
 export interface InstalledAppDto  { packageName: string; appName: string; version: string; installedAt: number; lastSeenAt: number; iconBase64?: string }
 export interface MusicPlayDto     { appPackage: string; trackTitle: string; artistName: string; albumName?: string; durationMs?: number; albumArt?: string; timestamp: number }
+export interface BrowserHistoryDto { url: string; title: string; browser: string; iconBase64?: string; timestamp: number }
 
 // Auth
 export const login    = (email: string, password: string) =>
@@ -55,3 +56,6 @@ export const getInstalledApps = (deviceId: number) =>
 
 export const getMusicHistory = (deviceId: number, limit = 200) =>
   http.get<MusicPlayDto[]>(`/dashboard/devices/${deviceId}/music?limit=${limit}`)
+
+export const getBrowserHistory = (deviceId: number, limit = 200) =>
+  http.get<BrowserHistoryDto[]>(`/dashboard/devices/${deviceId}/browser?limit=${limit}`)

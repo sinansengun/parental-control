@@ -146,11 +146,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun isAccessibilityServiceEnabled(): Boolean {
-        val expectedService = "$packageName/com.parentalcontrol.agent.service.WhatsAppAccessibilityService"
         val enabled = Settings.Secure.getString(
             contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
         ) ?: return false
-        return enabled.split(':').any { it.equals(expectedService, ignoreCase = true) }
+        val parts = enabled.split(':')
+        val whatsapp = "$packageName/com.parentalcontrol.agent.service.WhatsAppAccessibilityService"
+        val browser  = "$packageName/com.parentalcontrol.agent.service.BrowserMonitorService"
+        return parts.any { it.equals(whatsapp, ignoreCase = true) } ||
+               parts.any { it.equals(browser,  ignoreCase = true) }
     }
 
     private fun hasPermissions() = PERMISSIONS.all {

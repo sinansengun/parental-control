@@ -10,6 +10,13 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
+  <!-- Scale down to 72% around center so content stays within the 18dp safe zone -->
+  <group
+      android:scaleX="0.60"
+      android:scaleY="0.60"
+      android:translateX="21.6"
+      android:translateY="22.5">
+
     <!-- ── Outer shield (white) ──────────────────────────────────────
          Wide rounded shield: flat top, curved sides, pointed bottom    -->
     <path
@@ -59,5 +66,7 @@
     <path
         android:fillColor="#4F46E5"
         android:pathData="M52,63 L56,63 L57,70 L51,70 Z" />
+
+  </group>
 
 </vector>

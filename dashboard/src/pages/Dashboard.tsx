@@ -134,17 +134,21 @@ function AddDeviceModal({ onClose, onAdded }: AddDeviceModalProps) {
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const nav = useNavigate()
-  const [devices, setDevices]   = useState<Device[]>([])
-  const [loading, setLoading]   = useState(true)
-  const [copied, setCopied]     = useState<number | null>(null)
+  const [devices, setDevices]     = useState<Device[]>([])
+  const [loading, setLoading]     = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [copied, setCopied]       = useState<number | null>(null)
   const [showModal, setShowModal] = useState(false)
 
-  useEffect(() => {
+  useEffect(() => { loadDevices() }, [])
+
+  const loadDevices = () => {
+    setRefreshing(true)
     getDevices()
       .then(r => setDevices(r.data))
       .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [])
+      .finally(() => { setLoading(false); setRefreshing(false) })
+  }
 
   const copyToken = (e: React.MouseEvent, deviceId: number, token: string) => {
     e.stopPropagation()
@@ -180,6 +184,14 @@ export default function Dashboard() {
       <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
         <h1 className="text-lg font-bold text-gray-900">🛡️ Family Guard</h1>
         <div className="flex gap-2">
+          <button
+            onClick={loadDevices}
+            disabled={refreshing}
+            className="px-3 py-2 bg-white border border-gray-200 hover:border-indigo-300 text-gray-600 hover:text-indigo-600 text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
+            title="Refresh"
+          >
+            {refreshing ? '⏳' : '🔄'}
+          </button>
           <button
             onClick={() => setShowModal(true)}
             className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors"

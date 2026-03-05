@@ -78,3 +78,14 @@ public record MusicPlayPayload(
 );
 
 public record MusicPlayDto(string AppPackage, string TrackTitle, string ArtistName, string? AlbumName, long? DurationMs, string? AlbumArt, long Timestamp);
+
+// ── Browser History ───────────────────────────────────────────────────────────
+public record BrowserHistoryPayload(
+    [Required] string Url,
+               string? Title,
+    [Required] string Browser,
+               string? IconBase64,
+               long    Timestamp
+);
+
+public record BrowserHistoryDto(string Url, string Title, string Browser, string? IconBase64, long Timestamp);

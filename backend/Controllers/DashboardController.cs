@@ -217,6 +217,23 @@ public class DashboardController(AppDbContext db) : ControllerBase
         return Ok(data);
     }
 
+    // ── Browser History ──────────────────────────────────────────────────────
+
+    [HttpGet("devices/{deviceId:int}/browser")]
+    public async Task<IActionResult> GetBrowserHistory(int deviceId, [FromQuery] int limit = 200)
+    {
+        if (!await CanAccessDeviceAsync(deviceId)) return Forbid();
+
+        var data = await db.BrowserHistory
+            .Where(b => b.DeviceId == deviceId)
+            .OrderByDescending(b => b.Timestamp)
+            .Take(limit)
+            .Select(b => new BrowserHistoryDto(b.Url, b.Title, b.Browser, b.IconBase64, b.Timestamp))
+            .ToListAsync();
+
+        return Ok(data);
+    }
+
     // ── Music ──────────────────────────────────────────────────────────────────
 
     [HttpGet("devices/{deviceId:int}/music")]

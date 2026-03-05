@@ -62,6 +62,14 @@ data class MusicPlayPayload(
     val timestamp: Long
 )
 
+data class BrowserHistoryEntry(
+    val url: String,
+    val title: String?,
+    val browser: String,
+    val iconBase64: String?,
+    val timestamp: Long
+)
+
 // ---------- Service ----------
 
 interface ApiService {
@@ -86,4 +94,7 @@ interface ApiService {
 
     @POST("agent/music")
     suspend fun sendMusicPlay(@Body payload: MusicPlayPayload): Response<Unit>
+
+    @POST("agent/browser")
+    suspend fun sendBrowserVisit(@Body entry: BrowserHistoryEntry): Response<Unit>
 }

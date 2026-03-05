@@ -243,4 +243,44 @@ public class AgentController(AppDbContext db) : ControllerBase
 
         return NoContent();
     }
+
+    // ── Browser History ─────────────────────────────────────────────────────────────────────────
+    [HttpPost("browser")]
+    public async Task<IActionResult> PostBrowserVisit([FromBody] BrowserHistoryPayload payload)
+    {
+        var device = await ResolveDeviceAsync();
+        if (device is null) return Unauthorized();
+
+        // Deduplicate: same URL within 30 seconds
+        var cutoff = payload.Timestamp - 30_000;
+        var existing = await db.BrowserHistory.FirstOrDefaultAsync(b =>
+            b.DeviceId  == device.Id &&
+            b.Url       == payload.Url &&
+            b.Timestamp >= cutoff);
+
+        if (existing is not null)
+        {
+            // Update icon if we now have one and the existing record doesn't
+            if (existing.IconBase64 is null && payload.IconBase64 is not null)
+            {
+                existing.IconBase64 = payload.IconBase64;
+                await db.SaveChangesAsync();
+            }
+        }
+        else
+        {
+            db.BrowserHistory.Add(new BrowserVisit
+            {
+                DeviceId   = device.Id,
+                Url        = payload.Url,
+                Title      = payload.Title ?? string.Empty,
+                Browser    = payload.Browser,
+                IconBase64 = payload.IconBase64,
+                Timestamp  = payload.Timestamp
+            });
+            await db.SaveChangesAsync();
+        }
+
+        return NoContent();
+    }
 }

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using ParentalControl.Backend.Data;
@@ -11,9 +12,11 @@ using ParentalControl.Backend.Data;
 namespace ParentalControl.Backend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260305200452_AddBrowserHistory")]
+    partial class AddBrowserHistory
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -36,9 +39,6 @@ namespace ParentalControl.Backend.Migrations
 
                     b.Property<int>("DeviceId")
                         .HasColumnType("integer");
-
-                    b.Property<string>("IconBase64")
-                        .HasColumnType("text");
 
                     b.Property<long>("Timestamp")
                         .HasColumnType("bigint");

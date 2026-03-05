@@ -15,6 +15,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<InstalledApp>    InstalledApps => Set<InstalledApp>();
     public DbSet<DeviceShare>     DeviceShares  => Set<DeviceShare>();
     public DbSet<MusicPlay>       MusicPlays    => Set<MusicPlay>();
+    public DbSet<BrowserVisit>    BrowserHistory => Set<BrowserVisit>();
 
     protected override void OnModelCreating(ModelBuilder mb)
     {
