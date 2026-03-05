@@ -187,10 +187,9 @@ export default function Dashboard() {
           <button
             onClick={loadDevices}
             disabled={refreshing}
-            className="px-3 py-2 bg-white border border-gray-200 hover:border-indigo-300 text-gray-600 hover:text-indigo-600 text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
-            title="Refresh"
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
           >
-            {refreshing ? '⏳' : '🔄'}
+            {refreshing ? 'Refreshing…' : '↻ Refresh'}
           </button>
           <button
             onClick={() => setShowModal(true)}

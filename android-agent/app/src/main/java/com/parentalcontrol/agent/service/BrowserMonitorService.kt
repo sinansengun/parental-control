@@ -1,9 +1,6 @@
 package com.parentalcontrol.agent.service
 
 import android.accessibilityservice.AccessibilityService
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.util.Base64
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -12,7 +9,6 @@ import com.parentalcontrol.agent.TokenStore
 import com.parentalcontrol.agent.network.ApiClient
 import com.parentalcontrol.agent.network.BrowserHistoryEntry
 import kotlinx.coroutines.*
-import java.io.ByteArrayOutputStream
 
 private const val TAG = "BrowserMonitor"
 
@@ -51,8 +47,6 @@ class BrowserMonitorService : AccessibilityService() {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var lastSentUrl = ""
     private var lastSentMs  = 0L
-    // Cache icons by package name so we only encode once per session
-    private val iconCache = mutableMapOf<String, String?>()
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         val pkg = event?.packageName?.toString() ?: return
@@ -78,7 +72,7 @@ class BrowserMonitorService : AccessibilityService() {
             try {
                 if (TokenStore.cachedToken.isEmpty()) TokenStore.loadToken(applicationContext)
                 if (TokenStore.cachedToken.isEmpty()) return@launch
-                val iconBase64 = iconCache.getOrPut(pkg) { getBrowserIcon(pkg) }
+                val iconBase64: String? = null
                 ApiClient.service.sendBrowserVisit(
                     BrowserHistoryEntry(url = url, title = title, browser = browserLabel, iconBase64 = iconBase64, timestamp = now)
                 )
@@ -154,17 +148,6 @@ class BrowserMonitorService : AccessibilityService() {
     }
 
     override fun onInterrupt() = Unit
-
-    private fun getBrowserIcon(pkg: String): String? = try {
-        val drawable = applicationContext.packageManager.getApplicationIcon(pkg)
-        val bmp = Bitmap.createBitmap(48, 48, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bmp)
-        drawable.setBounds(0, 0, 48, 48)
-        drawable.draw(canvas)
-        val bos = ByteArrayOutputStream()
-        bmp.compress(Bitmap.CompressFormat.PNG, 100, bos)
-        Base64.encodeToString(bos.toByteArray(), Base64.NO_WRAP)
-    } catch (_: Exception) { null }
 
     override fun onDestroy() {
         scope.cancel()

