@@ -56,13 +56,13 @@ export const getLatestLocation = (deviceId: number) =>
 export const getLocations = (deviceId: number, limit = 200) =>
   http.get<LocationDto[]>(`/dashboard/devices/${deviceId}/locations?limit=${limit}`)
 
-export const getCallLogs  = (deviceId: number, page = 1, pageSize = 50) =>
+export const getCallLogs  = (deviceId: number, page = 1, pageSize = 20) =>
   http.get<Paginated<CallLogDto>>(`/dashboard/devices/${deviceId}/calls?page=${page}&pageSize=${pageSize}`)
 
-export const getSmsLogs   = (deviceId: number, page = 1, pageSize = 50) =>
+export const getSmsLogs   = (deviceId: number, page = 1, pageSize = 20) =>
   http.get<Paginated<SmsDto>>(`/dashboard/devices/${deviceId}/sms?page=${page}&pageSize=${pageSize}`)
 
-export const getWhatsApp  = (deviceId: number, page = 1, pageSize = 50) =>
+export const getWhatsApp  = (deviceId: number, page = 1, pageSize = 20) =>
   http.get<Paginated<WhatsAppDto>>(`/dashboard/devices/${deviceId}/whatsapp?page=${page}&pageSize=${pageSize}`)
 
 export const getWhatsAppChats = (deviceId: number) =>
@@ -71,8 +71,8 @@ export const getWhatsAppChats = (deviceId: number) =>
 export const getInstalledApps = (deviceId: number) =>
   http.get<InstalledAppDto[]>(`/dashboard/devices/${deviceId}/apps`)
 
-export const getMusicHistory = (deviceId: number, page = 1, pageSize = 50) =>
+export const getMusicHistory = (deviceId: number, page = 1, pageSize = 20) =>
   http.get<Paginated<MusicPlayDto>>(`/dashboard/devices/${deviceId}/music?page=${page}&pageSize=${pageSize}`)
 
-export const getBrowserHistory = (deviceId: number, page = 1, pageSize = 50) =>
+export const getBrowserHistory = (deviceId: number, page = 1, pageSize = 20) =>
   http.get<Paginated<BrowserHistoryDto>>(`/dashboard/devices/${deviceId}/browser?page=${page}&pageSize=${pageSize}`)

@@ -159,7 +159,7 @@ public class DashboardController(AppDbContext db) : ControllerBase
     // ── Call Logs ──────────────────────────────────────────────────────────────
 
     [HttpGet("devices/{deviceId:int}/calls")]
-    public async Task<IActionResult> GetCallLogs(int deviceId, [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
+    public async Task<IActionResult> GetCallLogs(int deviceId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
         if (!await CanAccessDeviceAsync(deviceId)) return Forbid();
 
@@ -180,7 +180,7 @@ public class DashboardController(AppDbContext db) : ControllerBase
     // ── SMS ────────────────────────────────────────────────────────────────────
 
     [HttpGet("devices/{deviceId:int}/sms")]
-    public async Task<IActionResult> GetSmsLogs(int deviceId, [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
+    public async Task<IActionResult> GetSmsLogs(int deviceId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
         if (!await CanAccessDeviceAsync(deviceId)) return Forbid();
 
@@ -201,7 +201,7 @@ public class DashboardController(AppDbContext db) : ControllerBase
     // ── WhatsApp notifications ─────────────────────────────────────────────────
 
     [HttpGet("devices/{deviceId:int}/whatsapp")]
-    public async Task<IActionResult> GetWhatsApp(int deviceId, [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
+    public async Task<IActionResult> GetWhatsApp(int deviceId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
         if (!await CanAccessDeviceAsync(deviceId)) return Forbid();
 
@@ -261,7 +261,7 @@ public class DashboardController(AppDbContext db) : ControllerBase
     // ── Browser History ──────────────────────────────────────────────────────
 
     [HttpGet("devices/{deviceId:int}/browser")]
-    public async Task<IActionResult> GetBrowserHistory(int deviceId, [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
+    public async Task<IActionResult> GetBrowserHistory(int deviceId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
         if (!await CanAccessDeviceAsync(deviceId)) return Forbid();
 
@@ -282,7 +282,7 @@ public class DashboardController(AppDbContext db) : ControllerBase
     // ── Music ──────────────────────────────────────────────────────────────────
 
     [HttpGet("devices/{deviceId:int}/music")]
-    public async Task<IActionResult> GetMusicHistory(int deviceId, [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
+    public async Task<IActionResult> GetMusicHistory(int deviceId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
         if (!await CanAccessDeviceAsync(deviceId)) return Forbid();
 
