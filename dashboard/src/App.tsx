@@ -3,10 +3,20 @@ import LoginPage    from './pages/LoginPage'
 import Dashboard    from './pages/Dashboard'
 import DevicePage   from './pages/DevicePage'
 
-const token = () => localStorage.getItem('token')
+function isTokenValid(): boolean {
+  const token = localStorage.getItem('token')
+  if (!token) return false
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    // exp is in seconds
+    return payload.exp * 1000 > Date.now()
+  } catch {
+    return false
+  }
+}
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
-  return token() ? children : <Navigate to="/login" replace />
+  return isTokenValid() ? children : <Navigate to="/login" replace />
 }
 
 export default function App() {
