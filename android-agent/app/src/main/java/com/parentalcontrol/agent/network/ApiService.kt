@@ -42,6 +42,7 @@ data class WhatsAppChatPayload(
     val chat: String,
     val sender: String,
     val message: String,
+    val messageTime: String?,
     val timestamp: Long
 )
 

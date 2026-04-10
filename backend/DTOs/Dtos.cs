@@ -57,7 +57,7 @@ public record WhatsAppPayload(
     long    Timestamp
 );
 
-public record WhatsAppChatPayload(string Chat, string Sender, string Message, long Timestamp);
+public record WhatsAppChatPayload(string Chat, string Sender, string Message, string? MessageTime, long Timestamp);
 
 // ── Dashboard responses ───────────────────────────────────────────────────────
 public record LocationDto(double Latitude, double Longitude, float Accuracy, long Timestamp);
@@ -68,7 +68,7 @@ public record SmsDto(string Address, string Body, long Date, int Type);
 
 public record WhatsAppDto(string AppPackage, string AppName, string? AppIcon, string Sender, string Message, long Timestamp);
 
-public record WhatsAppChatDto(string Chat, string Sender, string Message, long Timestamp);
+public record WhatsAppChatDto(string Chat, string Sender, string Message, string? MessageTime, long Timestamp);
 
 // ── Installed Apps ────────────────────────────────────────────────────────────
 public record InstalledAppPayload(string PackageName, string AppName, string Version, long InstalledAt, string? IconBase64);

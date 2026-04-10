@@ -230,7 +230,7 @@ public class DashboardController(AppDbContext db) : ControllerBase
             .Where(w => w.DeviceId == deviceId)
             .OrderByDescending(w => w.Timestamp)
             .Take(limit)
-            .Select(w => new WhatsAppChatDto(w.Chat, w.Sender, w.Message, w.Timestamp))
+            .Select(w => new WhatsAppChatDto(w.Chat, w.Sender, w.Message, w.MessageTime, w.Timestamp))
             .ToListAsync();
 
         return Ok(data);

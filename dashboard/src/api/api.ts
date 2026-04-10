@@ -27,7 +27,7 @@ export interface LocationDto  { latitude: number; longitude: number; accuracy: n
 export interface CallLogDto   { number: string; name: string; type: number; date: number; duration: number }
 export interface SmsDto       { address: string; body: string; date: number; type: number }
 export interface WhatsAppDto      { appPackage: string; appName: string; appIcon?: string; sender: string; message: string; timestamp: number }
-export interface WhatsAppChatDto  { chat: string; sender: string; message: string; timestamp: number }
+export interface WhatsAppChatDto  { chat: string; sender: string; message: string; messageTime?: string; timestamp: number }
 export interface InstalledAppDto  { packageName: string; appName: string; version: string; installedAt: number; lastSeenAt: number; iconBase64?: string }
 export interface MusicPlayDto     { appPackage: string; trackTitle: string; artistName: string; albumName?: string; durationMs?: number; albumArt?: string; timestamp: number }
 export interface BrowserHistoryDto { url: string; title: string; browser: string; iconBase64?: string; timestamp: number }

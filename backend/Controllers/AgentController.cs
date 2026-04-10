@@ -144,24 +144,24 @@ public class AgentController(AppDbContext db) : ControllerBase
         var device = await ResolveDeviceAsync();
         if (device is null) return Unauthorized();
 
-        // Deduplicate: same chat+sender+message within 60 seconds
-        var window = payload.Timestamp - 60_000;
+        // Deduplicate: exact match on chat + sender + message + messageTime
         var exists = await db.WhatsAppChats.AnyAsync(w =>
-            w.DeviceId == device.Id &&
-            w.Chat     == payload.Chat &&
-            w.Sender   == payload.Sender &&
-            w.Message  == payload.Message &&
-            w.Timestamp >= window);
+            w.DeviceId    == device.Id &&
+            w.Chat        == payload.Chat &&
+            w.Sender      == payload.Sender &&
+            w.Message     == payload.Message &&
+            w.MessageTime == payload.MessageTime);
 
         if (!exists)
         {
             db.WhatsAppChats.Add(new WhatsAppChatMsg
             {
-                DeviceId  = device.Id,
-                Chat      = payload.Chat,
-                Sender    = payload.Sender,
-                Message   = payload.Message,
-                Timestamp = payload.Timestamp
+                DeviceId    = device.Id,
+                Chat        = payload.Chat,
+                Sender      = payload.Sender,
+                Message     = payload.Message,
+                MessageTime = payload.MessageTime,
+                Timestamp   = payload.Timestamp
             });
             await db.SaveChangesAsync();
         }

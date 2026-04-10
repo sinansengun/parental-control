@@ -544,7 +544,7 @@ export default function DevicePage() {
                             )}
                             <p className="leading-snug break-words">{m.message}</p>
                             <p className="text-right text-[10px] text-gray-400 mt-1 -mb-0.5">
-                              {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {m.messageTime ?? new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </p>
                           </div>
                         </div>

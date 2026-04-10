@@ -56,6 +56,16 @@
         android:layout_marginBottom="8dp" />
 
     <Button
+        android:id="@+id/btnLock"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="🔒 Lock App"
+        android:backgroundTint="#546E7A"
+        android:textColor="#FFFFFF"
+        android:textSize="13sp"
+        android:layout_marginBottom="8dp" />
+
+    <Button
         android:id="@+id/btnNotifications"
         android:layout_width="match_parent"
         android:layout_height="48dp"
@@ -71,6 +81,16 @@
         android:layout_height="48dp"
         android:text="Enable Accessibility Service"
         android:backgroundTint="#4E342E"
+        android:textColor="#FFFFFF"
+        android:textSize="13sp"
+        android:layout_marginBottom="8dp" />
+
+    <Button
+        android:id="@+id/btnCheckPermissions"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="Check Permissions"
+        android:backgroundTint="#2E7D32"
         android:textColor="#FFFFFF"
         android:textSize="13sp"
         android:layout_marginBottom="12dp" />

@@ -19,7 +19,6 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.work.*
-import com.parentalcontrol.agent.service.LocationTrackingService
 import com.parentalcontrol.agent.service.SyncWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -35,6 +34,7 @@ class MainActivity : AppCompatActivity() {
         Manifest.permission.READ_SMS
     )
     private val PERM_CODE = 1001
+    private val PERM_CODE_BACKGROUND = 1002
 
     private var tvLog: TextView? = null
     private var scrollLog: ScrollView? = null
@@ -103,8 +103,10 @@ class MainActivity : AppCompatActivity() {
         val tvStatus         = findViewById<TextView>(R.id.tvStatus)
         val tvDeviceToken    = findViewById<TextView>(R.id.tvDeviceToken)
         val btnActivate      = findViewById<Button>(R.id.btnActivate)
+        val btnLock          = findViewById<Button>(R.id.btnLock)
         val btnNotifications = findViewById<Button>(R.id.btnNotifications)
         val btnAccessibility = findViewById<Button>(R.id.btnAccessibility)
+        val btnCheckPerms    = findViewById<Button>(R.id.btnCheckPermissions)
 
         // Show masked token for reference
         val token = TokenStore.cachedToken
@@ -120,12 +122,32 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        btnLock.setOnClickListener {
+            TokenStore.pinVerified = false
+            checkPinRequired()
+        }
+
+        // Hide lock button if no PIN is set
+        CoroutineScope(Dispatchers.IO).launch {
+            val hasPIN = try {
+                val resp = com.parentalcontrol.agent.network.ApiClient.service.getDeviceStatus()
+                resp.isSuccessful && resp.body()?.hasPIN == true
+            } catch (_: Exception) { false }
+            withContext(Dispatchers.Main) {
+                btnLock.visibility = if (hasPIN) android.view.View.VISIBLE else android.view.View.GONE
+            }
+        }
+
         btnNotifications.setOnClickListener {
             startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
         }
 
         btnAccessibility.setOnClickListener {
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+        }
+
+        btnCheckPerms.setOnClickListener {
+            checkAndRequestPermissions()
         }
 
         // Update button labels based on current state
@@ -135,6 +157,7 @@ class MainActivity : AppCompatActivity() {
         if (isAccessibilityServiceEnabled()) {
             btnAccessibility.text = "Accessibility Service ✓"
         }
+        updatePermissionsButton(btnCheckPerms)
 
         // Bind log views
         tvLog     = findViewById(R.id.tvLog)
@@ -158,7 +181,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        // App came back from background — re-verify PIN if screen was already shown
+        // Only check PIN if it was explicitly locked via the Lock button
         if (screenInitialized && !TokenStore.pinVerified) {
             checkPinRequired()
         }
@@ -174,6 +197,7 @@ class MainActivity : AppCompatActivity() {
             if (isNotificationListenerEnabled()) "Notifications \u2713" else "Enable Notifications"
         findViewById<Button>(R.id.btnAccessibility)?.text =
             if (isAccessibilityServiceEnabled()) "Accessibility Service \u2713" else "Enable Accessibility Service"
+        findViewById<Button>(R.id.btnCheckPermissions)?.let { updatePermissionsButton(it) }
     }
 
     override fun onPause() {
@@ -183,8 +207,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
-        // Reset so PIN is required next time the app comes to foreground
-        TokenStore.pinVerified = false
+        // pinVerified is NOT reset here — PIN is only required again after explicit Lock
     }
 
     private fun isNotificationListenerEnabled(): Boolean {
@@ -207,15 +230,60 @@ class MainActivity : AppCompatActivity() {
         ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
     }
 
-    private fun startMonitoring() {
-        // Start foreground location service
-        val serviceIntent = Intent(this, LocationTrackingService::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(serviceIntent)
-        } else {
-            startService(serviceIntent)
+    private fun missingPermissions(): List<String> {
+        val needed = mutableListOf<String>()
+        for (p in PERMISSIONS) {
+            if (ContextCompat.checkSelfPermission(this, p) != PackageManager.PERMISSION_GRANTED)
+                needed.add(p)
         }
+        // Android 10+ background location requires separate request after fine location is granted
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            // Only add if fine/coarse is already granted (system requires sequential request)
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                    == PackageManager.PERMISSION_GRANTED) {
+                needed.add(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+            }
+        }
+        return needed
+    }
 
+    private fun checkAndRequestPermissions() {
+        val missing = missingPermissions()
+        if (missing.isEmpty()) {
+            Toast.makeText(this, "All permissions granted ✓", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val hasBackground = missing.contains(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+        val basicMissing  = missing.filter { it != Manifest.permission.ACCESS_BACKGROUND_LOCATION }
+
+        if (basicMissing.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, basicMissing.toTypedArray(), PERM_CODE)
+        } else if (hasBackground && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION),
+                PERM_CODE_BACKGROUND
+            )
+        }
+    }
+
+    private fun updatePermissionsButton(btn: Button) {
+        val missing = missingPermissions()
+        if (missing.isEmpty()) {
+            btn.text = "Permissions ✓"
+            btn.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                android.graphics.Color.parseColor("#1B5E20"))
+        } else {
+            val labels = missing.map { it.substringAfterLast('.') }
+            btn.text = "Fix Permissions (${labels.joinToString(", ")})"
+            btn.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                android.graphics.Color.parseColor("#B71C1C"))
+        }
+    }
+
+    private fun startMonitoring() {
         // Run an immediate one-time sync first
         val immediateSync = OneTimeWorkRequestBuilder<SyncWorker>()
             .setConstraints(Constraints.Builder()
@@ -241,10 +309,33 @@ class MainActivity : AppCompatActivity() {
         requestCode: Int, permissions: Array<String>, grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == PERM_CODE && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
-            startMonitoring()
-        } else {
-            Toast.makeText(this, "All permissions are required", Toast.LENGTH_LONG).show()
+        when (requestCode) {
+            PERM_CODE -> {
+                val allGranted = grantResults.all { it == PackageManager.PERMISSION_GRANTED }
+                if (allGranted) {
+                    // Check if background location also needs requesting
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+                        ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                            != PackageManager.PERMISSION_GRANTED) {
+                        ActivityCompat.requestPermissions(
+                            this,
+                            arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION),
+                            PERM_CODE_BACKGROUND
+                        )
+                    } else {
+                        startMonitoring()
+                        Toast.makeText(this, "All permissions granted ✓", Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    Toast.makeText(this, "Some permissions denied — monitoring may be limited", Toast.LENGTH_LONG).show()
+                }
+                findViewById<Button>(R.id.btnCheckPermissions)?.let { updatePermissionsButton(it) }
+            }
+            PERM_CODE_BACKGROUND -> {
+                startMonitoring()
+                Toast.makeText(this, "All permissions granted ✓", Toast.LENGTH_SHORT).show()
+                findViewById<Button>(R.id.btnCheckPermissions)?.let { updatePermissionsButton(it) }
+            }
         }
     }
 }
